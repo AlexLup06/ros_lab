@@ -1,0 +1,83 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    # this will publish the joint states to the /joint_states topic:
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    forward_position_controller:
+      type: forward_command_controller/ForwardCommandController
+
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_controller:
+      type: position_controllers/GripperActionController
+
+    arm_speed_forwarder:
+      type: velocity_controllers/JointGroupVelocityController
+
+
+forward_position_controller:
+  ros__parameters:
+    joints:
+      - theta_1
+      - theta_2
+      - theta_3
+      - theta_4
+      - theta_5
+    interface_name: position
+
+
+arm_controller:
+  ros__parameters:
+    joints:
+      - theta_1
+      - theta_2
+      - theta_3
+      - theta_4
+      - theta_5
+
+    command_interfaces:
+      - position
+
+    state_interfaces:
+      - position
+      - velocity
+
+    state_publish_rate: 50.0 # Defaults to 50
+    action_monitor_rate: 20.0 # Defaults to 20
+    start_time_tolerance: 0.5 # seconds
+    allow_partial_joints_goal: false # Defaults to false
+    constraints:
+      stopped_velocity_tolerance: 0.01 # Defaults to 0.01
+      goal_time: 0.0 # Defaults to 0.0 (start immediately)
+
+gripper_controller:
+  ros__parameters:
+    joint: "theta_6"
+
+arm_speed_forwarder:
+  ros__parameters:
+    joints:
+      - theta_1
+      - theta_2
+      - theta_3
+      - theta_4
+      - theta_5
+
+    command_interfaces:
+      - velocity
+
+    state_interfaces:
+      - position
+      - velocity
+      
+    state_publish_rate: 50.0 # Defaults to 50
+    action_monitor_rate: 20.0 # Defaults to 20
+    start_time_tolerance: 0.5 # seconds
+    allow_partial_joints_goal: false # Defaults to false
+    constraints:
+      stopped_velocity_tolerance: 0.01 # Defaults to 0.01
+      goal_time: 0.0 # Defaults to 0.0 (start immediately)

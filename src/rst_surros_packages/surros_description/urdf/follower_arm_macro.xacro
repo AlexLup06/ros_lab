@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="myfirst">
+
+  <xacro:include filename="$(find surros_description)/urdf/common.xacro" />
+
+  <xacro:macro name="surros_robot">
+
+    <!-- Links -->
+    <xacro:visual_link name="base_link" mesh="base_link" xyz="0 0 0" rpy="0 0 0" material="M1"/>
+    <xacro:visual_link name="link_1" mesh="link_1" xyz="0 0 0.0563" rpy="3.141592 0 3.141592" material="M2"/>
+    <xacro:visual_link name="link_2" mesh="link_2" xyz="0.0148 -0.1083 0" rpy="3.141592 0 0" material="M1"/>
+    <xacro:visual_link name="link_3" mesh="link_3" xyz="0.100471 -0.002879 0" rpy="3.141592 0 0" material="M2"/>
+    <xacro:visual_link name="link_4" mesh="link_4" xyz="0.0305 0.000007 0.001353" rpy="0 -1.5708 3.1416" material="M1"/>
+    <xacro:visual_link name="link_5" mesh="link_5" xyz="0 0.0075 0.058" rpy="-1.5708 0 1.5708" material="M2"/>
+    <xacro:visual_link name="gripper_move" mesh="gripper_move" xyz="0 0 0" rpy="-1.5708 0 1.5708" material="M1"/>
+    <link name="tcp"/>
+
+    <!-- Joints -->
+    <xacro:rotational_joint name="theta_1" parent="base_link" child="link_1" xyz="0 0 0" rpy="0 0 0" axis="0 0 1" type="revolute" lower="-1.571" upper="1.571" effort="0" velocity="30.0"/>
+    <xacro:rotational_joint name="theta_2" parent="link_1" child="link_2" xyz="0 0 0.0563" rpy="-1.5708 0 1.5708" axis="0 0 1" type="revolute" lower="-0.5" upper="0.5" effort="0" velocity="30.0"/>
+    <xacro:rotational_joint name="theta_3" parent="link_2" child="link_3" xyz="0.0148 -0.1083 0" rpy="0 0 -1.43498" axis="0 0 1" type="revolute" lower="-1.571" upper="1.571" effort="0" velocity="30.0"/>
+    <xacro:rotational_joint name="theta_4" parent="link_3" child="link_4" xyz="0.100471 -0.002879 0" rpy="0 0 -0.028647" axis="0 0 1" type="revolute" lower="-1.571" upper="1.571" effort="0" velocity="30.0"/>
+    <xacro:rotational_joint name="theta_5" parent="link_4" child="link_5" xyz="0 0.000007 -0.001353" rpy="1.5708 0 1.5708" axis="0 0 1" type="revolute" lower="-1.571" upper="1.571" effort="0" velocity="30.0"/>
+    <xacro:rotational_joint name="theta_6" parent="link_5" child="gripper_move" xyz="0 0.0075 0.05815" rpy="0 0 0" axis="1 0 0" type="revolute" lower="-1.571" upper="1.571" effort="0" velocity="30.0"/>
+    <xacro:fixed_joint name="tcp" parent="link_5" child="tcp" xyz="0 -0.00738 0.11387" rpy="0 0 1.5708"/>
+  
+  </xacro:macro>
+</robot>
