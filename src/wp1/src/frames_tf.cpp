@@ -1,7 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_eigen/tf2_eigen.h>
-#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <Eigen/Dense>
 #include <cmath>
 
@@ -10,7 +10,7 @@ int main(int argc, char** argv)
     rclcpp::init(argc, argv);
 
     auto node = rclcpp::Node::make_shared("frames_tf");
-    auto broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(node);
+    auto broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
