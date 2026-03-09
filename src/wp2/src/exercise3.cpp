@@ -20,23 +20,18 @@ int main(int argc, char **argv)
     robot::SurrosControl surros(node);
     surros.initialize();
 
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node);
-    std::thread spin_thread([&executor]() { executor.spin(); });
-
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
     // Parameters for pick/place positions and gripper settings
     const std::vector<double> pick_xyz = node->declare_parameter<std::vector<double>>(
-        "pick_xyz", {0.20, 0.00, 0.08});
+        "pick_xyz", {0.0, 0.12, 0.0});
     const std::vector<double> place_xyz = node->declare_parameter<std::vector<double>>(
-        "place_xyz", {0.15, -0.15, 0.08});
+        "place_xyz", {0.0, 0.7, 0.0});
 
-    const double approach_z_offset = node->declare_parameter<double>("approach_z_offset", 0.08);
-    const double grasp_z_offset = node->declare_parameter<double>("grasp_z_offset", 0.02);
+    const double block_size = node->declare_parameter<double>("block_size", 0.025);  // [m] edge length
+    const double approach_z_offset = node->declare_parameter<double>("approach_z_offset", block_size * 2.0);
+    const double grasp_z_offset = node->declare_parameter<double>("grasp_z_offset", block_size * 0.5);
 
-    const double psi = node->declare_parameter<double>("psi", 0.0);
-    const double phi = node->declare_parameter<double>("phi", 0.0);
     const double move_speed = node->declare_parameter<double>("move_speed", 0.5);
 
     const int gripper_open = node->declare_parameter<int>("gripper_open", 80);
@@ -45,8 +40,6 @@ int main(int argc, char **argv)
     if (pick_xyz.size() != 3 || place_xyz.size() != 3)
     {
         RCLCPP_ERROR(node->get_logger(), "pick_xyz and place_xyz must be 3-element vectors.");
-        executor.cancel();
-        spin_thread.join();
         rclcpp::shutdown();
         return 1;
     }
@@ -58,6 +51,11 @@ int main(int argc, char **argv)
     const Eigen::Vector3d pick_grasp = pick + Eigen::Vector3d(0.0, 0.0, grasp_z_offset);
     const Eigen::Vector3d place_above = place + Eigen::Vector3d(0.0, 0.0, approach_z_offset);
     const Eigen::Vector3d place_release = place + Eigen::Vector3d(0.0, 0.0, grasp_z_offset);
+
+    Eigen::Matrix3d R_down;
+    R_down << 1, 0, 0,
+              0, -1, 0,
+              0, 0, -1;
 
     std::vector<Waypoint> sequence = {
         {pick_above, "above_pick"},
@@ -77,7 +75,11 @@ int main(int argc, char **argv)
     {
         const auto& step = sequence[i];
 
-        bool success = surros.setEndeffectorPose(step.xyz, psi, phi, move_speed, false, true);
+        Eigen::Affine3d desired_pose = Eigen::Affine3d::Identity();
+        desired_pose.translation() = step.xyz;
+        desired_pose.linear() = R_down;
+
+        bool success = surros.setEndeffectorPose(desired_pose, move_speed, false, true);
         if (!success)
         {
             RCLCPP_WARN(node->get_logger(), "IK failed at step %zu (%s).", i + 1, step.label.c_str());
@@ -97,8 +99,6 @@ int main(int argc, char **argv)
 
     RCLCPP_INFO(node->get_logger(), "Pick-and-place sequence finished.");
 
-    executor.cancel();
-    spin_thread.join();
     rclcpp::shutdown();
     return 0;
 }
