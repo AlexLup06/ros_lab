@@ -1,0 +1,49 @@
+# ROS2 build system
+build/
+install/
+log/
+
+# Colcon
+.colcon/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C++
+*.o
+*.so
+*.a
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# VSCode
+.vscode/
+
+# CLion / JetBrains
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ROS environment
+*.log
+
+# Test results
+test_results/
+
+# Coverage
+coverage/
+*.gcda
+*.gcno
+
+# Python virtual environments
+venv/
+.env/
