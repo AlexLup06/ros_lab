@@ -3,11 +3,26 @@
 <package format="3">
   <name>workpackage_2</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Joint-space robot control examples using surros_lib</description>
   <maintainer email="sven.gravemeier@tu-dortmund.de">gravemeier@rst</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>surros_lib</depend>
+  <depend>surros_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+  <depend>visualization_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>interactive_markers</depend>
+  <depend>controller_manager_msgs</depend>
+  <depend>eigen</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

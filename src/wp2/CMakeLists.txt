@@ -56,8 +56,16 @@ if(BUILD_TESTING)
 endif()
 
 
-add_executable(robot_control
-  src/robot_control.cpp
+add_executable(exercise1
+  src/exercise1.cpp
+)
+
+add_executable(exercise2
+  src/exercise2.cpp
+)
+
+add_executable(exercise3
+  src/exercise3.cpp
 )
 
 # Add surros_lib include directory
@@ -77,16 +85,58 @@ include_directories("/usr/include/eigen3")
 #     PRIVATE surros_lib
 #     PRIVATE surros_hardware
 # )
-target_link_libraries(robot_control
+target_link_libraries(exercise1
+  ${surros_lib_LIBRARIES}
+  #${surros_hardware_LIBRARIES}
+)
+
+target_link_libraries(exercise2
+  ${surros_lib_LIBRARIES}
+  #${surros_hardware_LIBRARIES}
+)
+
+target_link_libraries(exercise3
   ${surros_lib_LIBRARIES}
   #${surros_hardware_LIBRARIES}
 )
 
 # Link against ROS 2 libraries
-ament_target_dependencies(robot_control
+ament_target_dependencies(exercise1
   rclcpp
   surros_lib
   #surros_hardware
+  surros_msgs
+  sensor_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+)
+
+ament_target_dependencies(exercise2
+  rclcpp
+  surros_lib
+  surros_msgs
+  sensor_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+)
+
+ament_target_dependencies(exercise3
+  rclcpp
+  surros_lib
   surros_msgs
   sensor_msgs
   Eigen3
@@ -113,7 +163,7 @@ install(DIRECTORY DESTINATION lib/workpackage_2)
 
 
 # Install the executable to lib/workpackage_2 for ROS 2 launch compatibility
-install(TARGETS robot_control
+install(TARGETS exercise1 exercise2 exercise3
   RUNTIME DESTINATION lib/workpackage_2
 )
 
