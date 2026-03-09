@@ -37,21 +37,14 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
-    auto node = rclcpp::Node::make_shared("wp2_exercise2");
+    auto node = rclcpp::Node::make_shared("exercise2");
     robot::SurrosControl surros(node);
     surros.initialize();
-
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node);
-    std::thread spin_thread([&executor]() { executor.spin(); });
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
     std::vector<TargetPoseDelta> targets = {
-        {Eigen::Vector3d(0.03, 0.00, 0.02),  0.0,  0.0,  "delta_1"},
-        {Eigen::Vector3d(-0.02, 0.03, 0.00), 0.0,  0.2,  "delta_2"},
-        {Eigen::Vector3d(0.00, -0.03, 0.015), -0.2, 0.0, "delta_3"},
-        {Eigen::Vector3d(0.02, -0.02, -0.01), 0.15, -0.2, "delta_4"},
+        {Eigen::Vector3d(0.05, 0, 0.05),  0.0,  0.0,  "delta_1"},
     };
 
     for (size_t i = 0; i < targets.size(); ++i)
@@ -103,8 +96,6 @@ int main(int argc, char **argv)
                     vec3ToString(ori_error).c_str(), ori_error.norm());
     }
 
-    executor.cancel();
-    spin_thread.join();
     rclcpp::shutdown();
     return 0;
 }

@@ -47,13 +47,9 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
-    auto node = rclcpp::Node::make_shared("wp2_rexercise1");
+    auto node = rclcpp::Node::make_shared("exercise1");
     robot::SurrosControl surros(node);
     surros.initialize();
-
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node);
-    std::thread spin_thread([&executor]() { executor.spin(); });
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
@@ -94,8 +90,6 @@ int main(int argc, char **argv)
                     i + 1, jointVectorToString(abs_error).c_str(), error.norm());
     }
 
-    executor.cancel();
-    spin_thread.join();
     rclcpp::shutdown();
     return 0;
 }
