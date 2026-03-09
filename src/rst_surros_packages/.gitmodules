@@ -1,0 +1,3 @@
+[submodule "surros_lib/doxygen-awesome-css"]
+	path = surros_lib/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css.git

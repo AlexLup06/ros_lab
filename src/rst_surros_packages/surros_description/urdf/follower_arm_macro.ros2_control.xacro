@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+
+  <xacro:macro name="surros_robot_ros2_control" params="name use_mock_hardware:=^|false mock_sensor_commands:=^|false">
+
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <xacro:if value="${use_mock_hardware}"> 
+          <!-- <plugin>mock_components/GenericSystem</plugin>
+          <param name="mock_sensor_commands">${mock_sensor_commands}</param> --> 
+          <plugin>dynamixel_hardware/DynamixelHardware</plugin>
+          <param name="usb_port">/dev/ttyACM0</param> 
+          <param name="baud_rate">1000000</param>   
+          <param name="use_dummy">true</param>
+        </xacro:if>
+        <xacro:if value="${not use_mock_hardware}">
+          <plugin>dynamixel_hardware/DynamixelHardware</plugin>
+          <!-- <param name="usb_port">/dev/ttyACM0</param> -->
+          <param name="usb_port">/dev/ttyACM0</param> 
+          <param name="baud_rate">1000000</param>   
+          <!-- <param name="use_dummy">true</param> --> <!-- #TODO remove-->    
+        </xacro:if>
+      </hardware>
+      <joint name="theta_1">
+        <param name="id">1</param>
+        <command_interface name="position">
+          <!-- min and max parameters have no effect here directly, but can be used in hardware interface later
+              e.g. using joint_element.getParam("min") -->
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="theta_2">
+        <param name="id">2</param>
+        <command_interface name="position">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="theta_3">
+        <param name="id">3</param>
+        <command_interface name="position">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="theta_4">
+        <param name="id">4</param>
+        <command_interface name="position">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="theta_5">
+        <param name="id">5</param>
+        <command_interface name="position">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/> 
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="theta_6">
+        <param name="id">6</param>
+        <command_interface name="position">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+    </ros2_control>
+
+  </xacro:macro>
+</robot>

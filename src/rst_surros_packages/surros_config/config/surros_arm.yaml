@@ -1,0 +1,12 @@
+source: surros_arm.yaml
+port: /dev/ttyUSB0
+rate: 25
+baud: 115200
+joints: {
+    theta_1: {id: 1, cwlimit: 35,  ccwlimit: 900, offset: 511, speed: 40},
+    theta_2: {id: 2, cwlimit: 100, ccwlimit: 900, offset: 511, speed: 40},
+    theta_3: {id: 3, cwlimit: 100, ccwlimit: 900, offset: 511, speed: 40},
+    theta_4: {id: 4, cwlimit: 180, ccwlimit: 900, offset: 511, speed: 40},
+    theta_5: {id: 5, cwlimit: 180, ccwlimit: 900, offset: 511, speed: 40},
+    theta_6: {id: 6, cwlimit: 30,  ccwlimit: 400, offset: 215, speed: 40}
+}

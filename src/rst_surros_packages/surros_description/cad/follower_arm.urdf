@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<robot name="myfirst">
+
+  <link name="base_link">
+  <visual>
+    <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/base_link.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link> 
+  
+  <link name="link_1">
+   <visual>
+    <origin rpy="3.141592 0.0 3.141592" xyz="0.0 0.0 0.0563"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/link_1.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+  
+  <link name="link_2">
+   <visual>
+    <origin rpy="3.141592 0.0 0.0" xyz="0.0148 -0.1083 0.0"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/link_2.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+  
+  <link name="link_3">
+   <visual>
+    <origin rpy="3.141592 0.0 0.0" xyz="0.100471 -0.002879 0.0"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/link_3.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+  
+  <link name="link_4">
+   <visual>
+    <origin rpy="0 -1.5708 3.1416" xyz="0.0305 0.000007 0.001353"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/link_4.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+  
+  <link name="link_5">
+    <visual>
+     <origin rpy="-1.5708 0.0 1.5708" xyz="0.0 0.0075 0.058"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/link_5.stl">
+        </mesh>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+  
+  <link name="gripper_move">
+    <visual>
+     <origin rpy="-1.5708 0.0 1.5708" xyz="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://robot_description/mesh/gripper_move.stl">
+        </mesh>
+      </geometry>
+    </visual>
+  </link>
+  
+  <link name="tcp">
+  </link>
+  
+    
+   <joint name="theta_1" type="continuous">
+    <parent link="base_link"/>
+    <child link="link_1"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.0 0.0 0.0"/>
+  </joint>
+
+  <joint name="theta_2" type="continuous">
+    <parent link="link_1"/>
+    <child link="link_2"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.0 0.0 0.0563" rpy="-1.5708 0 1.5708"/>
+  </joint>
+  
+  <joint name="theta_3" type="continuous">
+    <parent link="link_2"/>
+    <child link="link_3"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.0148 -0.1083 0.0" rpy="0 0 -1.43498"/>
+  </joint>
+  
+  <joint name="theta_4" type="continuous">
+    <parent link="link_3"/>
+    <child link="link_4"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.100471 -0.002879 0.0" rpy="0 0 -0.028647"/>
+  </joint>
+  
+  <joint name="theta_5" type="continuous">
+    <parent link="link_4"/>
+    <child link="link_5"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.0 0.000007 -0.001353" rpy="1.5708 0 1.5708"/>
+  </joint>
+  
+  <joint name="theta_6" type="continuous">
+    <parent link="link_5"/>
+    <child link="gripper_move"/>
+    <axis xyz="1 0 0"/>
+    <origin xyz="0.0 0.0075 0.05815" rpy="0 0 0"/>
+  </joint>
+  
+  <joint name="tcp" type="fixed">
+    <parent link="link_5"/>
+    <child link="tcp"/>
+    <axis xyz="0 0 1"/>
+    <origin xyz="0.0 -0.00738 0.11387" rpy="0 0 0"/>
+  </joint>
+  
+</robot>
