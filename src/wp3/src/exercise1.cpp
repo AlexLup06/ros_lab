@@ -18,6 +18,7 @@ using Matrix5d = Eigen::Matrix<double, 5, 5>;
 
 static Vector5d clampJointVel(const Vector5d &vel, const robot::JointVector &max_speeds)
 {
+    // Clip joint velocities to safe limits
     Vector5d out = vel;
     for (int i = 0; i < out.size(); ++i)
     {
@@ -38,13 +39,16 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
     auto node = rclcpp::Node::make_shared("wp3_exercise1");
 
+    // Robot interface
     robot::SurrosControl robot(node);
     robot.initialize();
 
+    // Publish control error for rqt_plot
     auto error_pub = node->create_publisher<std_msgs::msg::Float64MultiArray>("/wp3/ex1/control_error", 10);
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
+    // Read current TCP pose
     Eigen::Affine3d start_pose = Eigen::Affine3d::Identity();
     robot.getEndeffectorState(start_pose);
 
@@ -52,6 +56,7 @@ int main(int argc, char **argv)
     const Eigen::Matrix3d R0 = start_pose.linear();
     Eigen::Quaterniond q0(R0);
 
+    // Target position in base_link
     const std::vector<double> target_xyz = node->declare_parameter<std::vector<double>>(
         "target_xyz", {p0.x() + 0.05, p0.y() - 0.05, p0.z() + 0.03});
     if (target_xyz.size() != 3)
@@ -63,6 +68,7 @@ int main(int argc, char **argv)
         return 1;
     }
     const Eigen::Vector3d p1(target_xyz[0], target_xyz[1], target_xyz[2]);
+    // Target orientation in base_link (RPY)
     const robot::RpyVector rpy0 = robot::convertRotMatToRpy(R0);
     const std::vector<double> target_rpy = node->declare_parameter<std::vector<double>>(
         "target_rpy", {rpy0(0) + 0, rpy0(1) + 0, rpy0(2) + 0});
@@ -81,6 +87,7 @@ int main(int argc, char **argv)
     const int steps = static_cast<int>(total_time / dt);
 
 
+    // Simple proportional gains
     Matrix5d K = Matrix5d::Zero();
     K(0, 0) = 2.0;
     K(1, 1) = 2.0;
@@ -90,6 +97,7 @@ int main(int argc, char **argv)
 
     rclcpp::Rate rate(1.0 / dt);
 
+    // Trajectory tracking loop
     for (int i = 0; i <= steps && rclcpp::ok(); ++i)
     {
         const double s = static_cast<double>(i) / static_cast<double>(steps);
@@ -107,11 +115,13 @@ int main(int argc, char **argv)
         const robot::RpyVector rpy_des = robot::convertRotMatToRpy(R_des);
         const robot::RpyVector rpy_cur = robot::convertRotMatToRpy(R_cur);
 
+        // 5D error: position + (pitch,yaw)
         Vector5d e;
         e << (p_des - p_cur),
             (rpy_des(1) - rpy_cur(1)),
             (rpy_des(2) - rpy_cur(2));
 
+        // Reduced 5x5 Jacobian (x,y,z,pitch,yaw)
         Matrix5d J;
         robot.getJacobianReduced(J);
 

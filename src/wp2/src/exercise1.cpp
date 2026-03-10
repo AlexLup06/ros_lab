@@ -12,6 +12,7 @@
 
 static std::string jointVectorToString(const robot::JointVector& q, int precision = 3)
 {
+    // Pretty-print joint vector for logging
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision);
     oss << "[";
@@ -29,11 +30,13 @@ static std::string jointVectorToString(const robot::JointVector& q, int precisio
 
 static robot::JointVector vectorFromRatio(const robot::JointVector& lower, const robot::JointVector& upper, double ratio)
 {
+    // Linear interpolation inside joint limits
     return lower + ratio * (upper - lower);
 }
 
 static robot::JointVector mixedVector(const robot::JointVector& lower, const robot::JointVector& upper)
 {
+    // Mix different ratios per joint to get a varied target
     robot::JointVector q;
     for (int i = 0; i < q.size(); ++i)
     {
@@ -47,6 +50,7 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
+    // ROS node + robot interface
     auto node = rclcpp::Node::make_shared("wp2_rexercise1");
     robot::SurrosControl surros(node);
     surros.initialize();
@@ -57,6 +61,7 @@ int main(int argc, char **argv)
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
+    // Build a few target joint configurations
     const auto lower = surros.getLowerJointLimits();
     const auto upper = surros.getUpperJointLimits();
 
@@ -66,6 +71,7 @@ int main(int argc, char **argv)
     targets.push_back(vectorFromRatio(lower, upper, 0.80));
     targets.push_back(mixedVector(lower, upper));
 
+    // Start from a known posture
     RCLCPP_INFO(node->get_logger(), "Moving to default joint configuration...");
     surros.setJointsDefault(rclcpp::Duration(3, 0), true);
     rclcpp::sleep_for(std::chrono::milliseconds(300));
@@ -74,6 +80,7 @@ int main(int argc, char **argv)
     {
         const auto& target = targets[i];
 
+        // Skip unsafe targets
         if (surros.isExceedingJointLimits(target))
         {
             RCLCPP_WARN(node->get_logger(), "Target %zu exceeds joint limits, skipping.", i + 1);
@@ -82,6 +89,7 @@ int main(int argc, char **argv)
 
         RCLCPP_INFO(node->get_logger(), "Target %zu: %s", i + 1, jointVectorToString(target).c_str());
 
+        // Command joints and read back actual state
         surros.setJoints(target, rclcpp::Duration(4, 0), false, true);
         rclcpp::sleep_for(std::chrono::milliseconds(300));
 

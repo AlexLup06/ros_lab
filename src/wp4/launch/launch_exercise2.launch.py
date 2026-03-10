@@ -6,11 +6,11 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-    # Launch the robot_control node from workpackage_3 package
-    workpackage_3_node = Node(
-        package='workpackage_3',
+    # Launch the robot_control node from workpackage_4 package
+    workpackage_4_node = Node(
+        package='workpackage_4',
         executable='exercise2',
-        name='wp3_exercise2',
+        name='wp4_exercise2',
         output='screen'
     )
 
@@ -19,5 +19,5 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use simulation (Gazebo) clock if true'),
-        workpackage_3_node
+        workpackage_4_node
     ])

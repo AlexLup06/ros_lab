@@ -12,6 +12,7 @@ void visualizeFrame(const Eigen::Matrix4d& H,
                     rclcpp::Publisher<Marker>::SharedPtr publisher,
                     const std::string& name)
 {
+    // Split transform into origin + rotation for drawing axes
     Eigen::Vector3d origin = H.block<3,1>(0,3);
     Eigen::Matrix3d rotation = H.block<3,3>(0,0);
 
@@ -19,6 +20,7 @@ void visualizeFrame(const Eigen::Matrix4d& H,
     Eigen::Vector3d y_axis = origin + rotation.col(1);
     Eigen::Vector3d z_axis = origin + rotation.col(2);
 
+    // Helper: publish one axis arrow
     auto publishArrow = [&](int id,
                             const Eigen::Vector3d& start,
                             const Eigen::Vector3d& end,
@@ -65,9 +67,11 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
+    // ROS node + marker publisher
     auto node = std::make_shared<rclcpp::Node>("frames_eigen");
     auto publisher = node->create_publisher<Marker>("visualization_marker", 10);
 
+    // Define two transforms in 3D (rotation + translation)
     Eigen::Matrix4d T1 = Eigen::Matrix4d::Identity();
     double a = M_PI / 4.0;
     T1(0,0) = std::cos(a);
@@ -85,10 +89,12 @@ int main(int argc, char **argv)
     T2(0,3) = 4.0;
     T2(2,3) = 2.0;
 
+    // Compose transforms
     Eigen::Matrix4d T3 = T1 * T2;
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
+    // Publish all three frames as RGB axes
     visualizeFrame(T1, publisher, "T1");
     visualizeFrame(T2, publisher, "T2");
     visualizeFrame(T3, publisher, "T3");

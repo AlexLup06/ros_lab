@@ -16,6 +16,7 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
+    // ROS node + robot interface
     auto node = rclcpp::Node::make_shared("wp2_exercise4");
     robot::SurrosControl surros(node);
     surros.initialize();
@@ -49,11 +50,13 @@ int main(int argc, char **argv)
     const Eigen::Vector3d pick(pick_xyz[0], pick_xyz[1], pick_xyz[2]);
     const Eigen::Vector3d place(place_xyz[0], place_xyz[1], place_xyz[2]);
 
+    // Keep TCP z-axis pointing down
     Eigen::Matrix3d R_down;
     R_down << 1, 0, 0,
         0, -1, 0,
         0, 0, -1;
 
+    // Build a pick-and-place path from one point to another
     auto build_sequence = [&](const Eigen::Vector3d &from, const Eigen::Vector3d &to)
     {
         const Eigen::Vector3d from_above = from + Eigen::Vector3d(0.0, 0.0, approach_z_offset);
@@ -75,6 +78,7 @@ int main(int argc, char **argv)
 
     int completed_cycles = 0;
     int cycle = 0;
+    // Loop cycles: A->B then B->A
     while (rclcpp::ok() && (max_cycles <= 0 || cycle < max_cycles))
     {
         const bool forward = (cycle % 2 == 0);
@@ -91,6 +95,7 @@ int main(int argc, char **argv)
         {
             const auto &step = sequence[i];
 
+            // Command absolute pose in base_link
             Eigen::Affine3d desired_pose = Eigen::Affine3d::Identity();
             desired_pose.translation() = step.xyz;
             desired_pose.linear() = R_down;

@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>workpackage_3</name>
+  <name>workpackage_4</name>
   <version>0.0.0</version>
-  <description>Trajectory tracking control using inverse kinematics</description>
+  <description>Image-based object detection using OpenCV</description>
   <maintainer email="sven.gravemeier@tu-dortmund.de">gravemeier@rst</maintainer>
   <license>TODO: License declaration</license>
 
@@ -13,17 +13,7 @@
   <depend>surros_lib</depend>
   <depend>surros_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
-  <depend>tf2_eigen</depend>
-  <depend>visualization_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>control_msgs</depend>
-  <depend>std_srvs</depend>
-  <depend>interactive_markers</depend>
-  <depend>controller_manager_msgs</depend>
+  <depend>opencv</depend>
   <depend>eigen</depend>
 
   <test_depend>ament_lint_auto</test_depend>

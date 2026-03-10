@@ -22,6 +22,7 @@ struct Sample
 
 static Vector5d clampJointVel(const Vector5d& vel, const robot::JointVector& max_speeds)
 {
+    // Clip joint velocities to safe limits
     Vector5d out = vel;
     for (int i = 0; i < out.size(); ++i)
     {
@@ -39,6 +40,7 @@ static std::vector<Sample> buildTrajectorySamples(const std::vector<Eigen::Vecto
                                                   double speed,
                                                   double dt)
 {
+    // Linear interpolation between waypoints with constant speed
     std::vector<Sample> samples;
     if (waypoints.size() < 2) return samples;
     if (speed <= 0.0 || dt <= 0.0) return samples;
@@ -71,6 +73,7 @@ static nav_msgs::msg::Path buildPathMessage(const std::vector<Sample>& samples,
                                             const Eigen::Quaterniond& q,
                                             const rclcpp::Time& stamp)
 {
+    // Convert samples into a Path message for RViz
     nav_msgs::msg::Path path;
     path.header.frame_id = "base_link";
     path.header.stamp = stamp;
@@ -98,21 +101,25 @@ int main(int argc, char** argv)
     rclcpp::init(argc, argv);
     auto node = rclcpp::Node::make_shared("wp3_exercise2");
 
+    // Robot interface
     robot::SurrosControl robot(node);
     robot.initialize();
 
+    // Publishers for error and paths
     auto error_pub = node->create_publisher<std_msgs::msg::Float64MultiArray>("/wp3/ex2/control_error", 10);
     auto desired_path_pub = node->create_publisher<nav_msgs::msg::Path>("/wp3/ex2/desired_path", 1);
     auto actual_path_pub = node->create_publisher<nav_msgs::msg::Path>("/wp3/ex2/actual_path", 10);
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
+    // Read current TCP pose
     Eigen::Affine3d start_pose = Eigen::Affine3d::Identity();
     robot.getEndeffectorState(start_pose);
 
     const Eigen::Vector3d p_start = start_pose.translation();
     const Eigen::Matrix3d R_start = start_pose.linear();
 
+    // Trajectory parameters
     const std::vector<double> origin_xyz = node->declare_parameter<std::vector<double>>(
         "origin_xyz", {p_start.x(), p_start.y(), p_start.z()});
     const double house_scale = node->declare_parameter<double>("house_scale", 0.06);
@@ -189,12 +196,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // Publish desired path once
     const auto desired_path = buildPathMessage(samples, q_des, node->get_clock()->now());
     desired_path_pub->publish(desired_path);
 
     nav_msgs::msg::Path actual_path;
     actual_path.header.frame_id = "base_link";
 
+    // Proportional gains
     Matrix5d K = Matrix5d::Zero();
     K(0, 0) = kp_pos;
     K(1, 1) = kp_pos;
@@ -204,6 +213,7 @@ int main(int argc, char** argv)
 
     rclcpp::Rate rate(1.0 / dt);
 
+    // Trajectory tracking loop
     for (size_t i = 0; i < samples.size() && rclcpp::ok(); ++i)
     {
         const auto& sample = samples[i];
@@ -215,17 +225,20 @@ int main(int argc, char** argv)
         const Eigen::Matrix3d R_cur = current_pose.linear();
         const robot::RpyVector rpy_cur = robot::convertRotMatToRpy(R_cur);
 
+        // 5D error: position + (pitch,yaw)
         Vector5d e;
         e << (sample.pos - p_cur),
              (rpy_des(1) - rpy_cur(1)),
              (rpy_des(2) - rpy_cur(2));
 
+        // Optional feedforward velocity
         Vector5d xd_dot = Vector5d::Zero();
         if (use_feedforward)
         {
             xd_dot << sample.vel, 0.0, 0.0;
         }
 
+        // Reduced Jacobian (x,y,z,pitch,yaw)
         robot::RobotJacobianReduced J;
         robot.getJacobianReduced(J);
 
@@ -239,6 +252,7 @@ int main(int argc, char** argv)
         err_msg.data.assign({e(0), e(1), e(2), e(3), e(4)});
         error_pub->publish(err_msg);
 
+        // Append actual pose to path for RViz
         geometry_msgs::msg::PoseStamped actual_pose;
         actual_pose.header.frame_id = "base_link";
         actual_pose.header.stamp = node->get_clock()->now();

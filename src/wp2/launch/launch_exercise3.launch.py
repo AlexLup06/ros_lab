@@ -8,7 +8,7 @@ def generate_launch_description():
     workpackage_2_node = Node(
         package='workpackage_2',
         executable='exercise3',
-        name='exercise3',
+        name='wp2_exercise3',
         output='screen'
     )
 

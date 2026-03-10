@@ -11,6 +11,7 @@
 
 static std::string vec3ToString(const Eigen::Vector3d &v, int precision = 3)
 {
+    // Compact vector print for logs
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision);
     oss << "[" << v.x() << ", " << v.y() << ", " << v.z() << "]";
@@ -19,6 +20,7 @@ static std::string vec3ToString(const Eigen::Vector3d &v, int precision = 3)
 
 static std::string rpyToString(const robot::RpyVector &rpy, int precision = 3)
 {
+    // Compact RPY print for logs
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision);
     oss << "[roll " << rpy(0) << ", pitch " << rpy(1) << ", yaw " << rpy(2) << "]";
@@ -35,6 +37,7 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
+    // ROS node + robot interface
     auto node = rclcpp::Node::make_shared("wp2_exercise2");
     robot::SurrosControl surros(node);
     surros.initialize();
@@ -52,24 +55,27 @@ int main(int argc, char **argv)
         0, -1, 0,
         0, 0, -1;
 
+    const double block_size = node->declare_parameter<double>("block_size", 0.025); // [m] edge length
+
+    // List of target poses to visit
     std::vector<TargetPose> targets;
     Eigen::Affine3d pose_1 = Eigen::Affine3d::Identity();
-    pose_1.translation() = Eigen::Vector3d(0.0, 0.12, 0.05);
+    pose_1.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 2.0);
     pose_1.linear() = R_down;
     targets.push_back({pose_1,
                        "pose_1"});
     Eigen::Affine3d pose_2 = Eigen::Affine3d::Identity();
-    pose_2.translation() = Eigen::Vector3d(0.0, 0.12, 0.0125);
+    pose_2.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 0.5);
     pose_2.linear() = R_down;
     targets.push_back({pose_2, "pose_2"});
 
     Eigen::Affine3d pose_3 = Eigen::Affine3d::Identity();
-    pose_3.translation() = Eigen::Vector3d(0.0, 0.12, 0.05);
+    pose_3.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 2.0);
     pose_3.linear() = R_down;
     targets.push_back({pose_3, "pose_3"});
 
     Eigen::Affine3d pose_4 = Eigen::Affine3d::Identity();
-    pose_4.translation() = Eigen::Vector3d(0.0, 0.05, 0.05);
+    pose_4.translation() = Eigen::Vector3d(0.0, 0.05, block_size * 2.0);
     pose_4.linear() = R_down;
     targets.push_back({pose_4, "pose_4"});
 
@@ -79,6 +85,7 @@ int main(int argc, char **argv)
 
         RCLCPP_INFO(node->get_logger(), "Target %zu (%s): moving to desired pose.", i + 1, target.label.c_str());
 
+        // Command IK and wait for completion
         surros.setEndeffectorPose(target.desired_pose, rclcpp::Duration(4, 0), false, true);
 
         rclcpp::sleep_for(std::chrono::milliseconds(300));
@@ -86,6 +93,7 @@ int main(int argc, char **argv)
         Eigen::Affine3d actual_pose = Eigen::Affine3d::Identity();
         surros.getEndeffectorState(actual_pose);
 
+        // Simple pose error check (position + orientation)
         const Eigen::Vector3d pos_error = actual_pose.translation() - target.desired_pose.translation();
         const Eigen::Vector3d ori_error = robot::computeOrientationError(target.desired_pose.linear(), actual_pose.linear());
 
