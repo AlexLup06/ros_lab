@@ -3,7 +3,6 @@
 
 #include <chrono>
 #include <string>
-#include <thread>
 #include <vector>
 
 struct Waypoint

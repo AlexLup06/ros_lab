@@ -11,19 +11,9 @@
 
   <depend>rclcpp</depend>
   <depend>surros_lib</depend>
-  <depend>surros_msgs</depend>
-  <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
-  <depend>tf2_eigen</depend>
-  <depend>visualization_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>control_msgs</depend>
-  <depend>std_srvs</depend>
-  <depend>interactive_markers</depend>
-  <depend>controller_manager_msgs</depend>
   <depend>eigen</depend>
 
   <test_depend>ament_lint_auto</test_depend>

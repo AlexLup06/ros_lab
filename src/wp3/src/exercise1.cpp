@@ -1,5 +1,3 @@
-#include <geometry_msgs/msg/point_stamped.hpp>
-#include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 
@@ -8,8 +6,6 @@
 #include <thread>
 #include <vector>
 
-#include <sensor_msgs/msg/joint_state.hpp>
-#include <surros_lib/kinematics.h>
 #include <surros_lib/misc.h>
 #include <surros_lib/surros_interface.h>
 
@@ -62,8 +58,6 @@ int main(int argc, char **argv)
     if (target_xyz.size() != 3)
     {
         RCLCPP_ERROR(node->get_logger(), "target_xyz must be a 3-element vector.");
-        executor.cancel();
-        spin_thread.join();
         rclcpp::shutdown();
         return 1;
     }

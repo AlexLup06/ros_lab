@@ -5,7 +5,6 @@
 
 #include <Eigen/Dense>
 #include <chrono>
-#include <thread>
 #include <vector>
 
 #include <surros_lib/misc.h>

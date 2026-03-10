@@ -5,7 +5,6 @@ project(workpackage_2)
 # Ensure local surros_lib package config is found
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/../../install/surros_lib/share/surros_lib/cmake")
 #list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_hardware/../../install/surros_hardware/share/surros_hardware/cmake")
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_msgs/../../install/surros_msgs/share/surros_msgs/cmake")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -28,20 +27,7 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../../install")
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(surros_lib REQUIRED)
-#find_package(surros_hardware REQUIRED)
-find_package(surros_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_eigen REQUIRED)
-find_package(visualization_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(control_msgs REQUIRED)
-
-find_package(std_srvs REQUIRED)
-find_package(interactive_markers REQUIRED)
-find_package(controller_manager_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -74,9 +60,6 @@ include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_l
 # Add surros_hardware include directory
 #include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_hardware/include")
 
-# Add surros_msgs include directory
-include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_msgs/include")
-
 # Add Eigen3 include directory
 include_directories("/usr/include/eigen3")
 
@@ -104,50 +87,19 @@ target_link_libraries(exercise3
 ament_target_dependencies(exercise1
   rclcpp
   surros_lib
-  #surros_hardware
-  surros_msgs
-  sensor_msgs
   Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
 )
 
 ament_target_dependencies(exercise2
   rclcpp
   surros_lib
-  surros_msgs
-  sensor_msgs
   Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
 )
 
 ament_target_dependencies(exercise3
   rclcpp
   surros_lib
-  surros_msgs
-  sensor_msgs
   Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
 )
 
 

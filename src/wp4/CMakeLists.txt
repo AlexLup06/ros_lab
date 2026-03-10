@@ -5,7 +5,6 @@ project(workpackage_4)
 # Ensure local surros_lib package config is found
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/../../install/surros_lib/share/surros_lib/cmake")
 #list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_hardware/../../install/surros_hardware/share/surros_hardware/cmake")
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_msgs/../../install/surros_msgs/share/surros_msgs/cmake")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -29,19 +28,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(surros_lib REQUIRED)
 #find_package(surros_hardware REQUIRED)
-find_package(surros_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_eigen REQUIRED)
-find_package(visualization_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(control_msgs REQUIRED)
-
-find_package(std_srvs REQUIRED)
-find_package(interactive_markers REQUIRED)
-find_package(controller_manager_msgs REQUIRED)
 
 find_package(OpenCV REQUIRED)
 
@@ -58,8 +45,12 @@ if(BUILD_TESTING)
 endif()
 
 
-add_executable(robot_control
-  src/robot_control.cpp
+add_executable(exercise1
+  src/exercise1.cpp
+)
+
+add_executable(exercise2
+  src/exercise2.cpp
 )
 
 # Add surros_lib include directory
@@ -67,9 +58,6 @@ include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_l
 
 # Add surros_hardware include directory
 #include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_hardware/include")
-
-# Add surros_msgs include directory
-include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_msgs/include")
 
 # Add Eigen3 include directory
 include_directories("/usr/include/eigen3")
@@ -82,28 +70,31 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 #     PRIVATE surros_lib
 #     PRIVATE surros_hardware
 # )
-target_link_libraries(robot_control
+target_link_libraries(exercise1
+  ${surros_lib_LIBRARIES}
+  #${surros_hardware_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(exercise2
   ${surros_lib_LIBRARIES}
   #${surros_hardware_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
 
 # Link against ROS 2 libraries
-ament_target_dependencies(robot_control
+ament_target_dependencies(exercise1
   rclcpp
   surros_lib
   #surros_hardware
-  surros_msgs
-  sensor_msgs
   Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
+)
+
+ament_target_dependencies(exercise2
+  rclcpp
+  surros_lib
+  #surros_hardware
+  Eigen3
 )
 
 
@@ -119,7 +110,7 @@ install(DIRECTORY DESTINATION lib/workpackage_4)
 
 
 # Install the executable to lib/workpackage_4 for ROS 2 launch compatibility
-install(TARGETS robot_control
+install(TARGETS exercise1 exercise2
   RUNTIME DESTINATION lib/workpackage_4
 )
 

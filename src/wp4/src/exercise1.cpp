@@ -1,6 +1,4 @@
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/joint_state.hpp>
-#include <surros_lib/kinematics.h>
 #include <surros_lib/surros_interface.h>
 
 #include <opencv2/opencv.hpp>
@@ -12,9 +10,6 @@
 
 using namespace cv;
 using namespace std;
-using JointVector = Eigen::Matrix<double, 5, 1>;
-
-
 struct Cube {
     string color;
     Point2f center;

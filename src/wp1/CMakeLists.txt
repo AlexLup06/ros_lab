@@ -33,7 +33,6 @@ ament_target_dependencies(frames_eigen
   rclcpp
   visualization_msgs
   geometry_msgs
-  tf2_eigen
 )
 
 target_include_directories(frames_eigen PUBLIC
