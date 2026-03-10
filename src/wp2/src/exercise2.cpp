@@ -42,11 +42,6 @@ int main(int argc, char **argv)
     robot::SurrosControl surros(node);
     surros.initialize();
 
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node);
-    std::thread spin_thread([&executor]()
-                            { executor.spin(); });
-
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
     // Define desired end-effector poses (T_base_tcp) here.
@@ -111,8 +106,6 @@ int main(int argc, char **argv)
                     vec3ToString(ori_error).c_str(), ori_error.norm());
     }
 
-    executor.cancel();
-    spin_thread.join();
     rclcpp::shutdown();
     return 0;
 }
