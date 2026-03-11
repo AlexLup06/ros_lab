@@ -22,7 +22,7 @@ int main(int argc, char **argv)
             double z = 0.0,
             double psi = 0.0,
             double phi = 0.0,
-            const std::chrono::seconds duration = std::chrono::seconds(10)){
+            const std::chrono::seconds duration = std::chrono::seconds(5)){
 
         // create the position vector
         Eigen::Vector3d desired_xyz(x,y,z);
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
         control.setEndeffectorPose(desired_xyz, psi, phi, rclcpp::Duration(duration));
 
         // wait for the robot to finish moving
-        rclcpp::sleep_for(duration);
+        //rclcpp::sleep_for(duration);
         rclcpp::sleep_for(std::chrono::seconds(2));
 
         // get the robots rotation matrix and translation vector
@@ -49,8 +49,9 @@ int main(int argc, char **argv)
 
     
     
-    setAndGetPose(0.00, 0.00, 0.25, 0.00, 0.00);
+    
     setAndGetPose(0.25, 0.00, 0.05, -0.5, 0.5);
-    //setAndGetPose(0.25, 0.00, 0.05, 0.5, -0.5);
+    setAndGetPose(0.25, 0.00, 0.05, 0.5, -0.5);
     setAndGetPose(0.01, 0.25, 0.05, 0.00, 0.00);
+    //setAndGetPose(0.00, 0.00, 0.3, 0.00, 0.00);
 }

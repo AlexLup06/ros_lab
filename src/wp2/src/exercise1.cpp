@@ -12,7 +12,7 @@ int main(int argc, char **argv)
     
     // create the node and surros control to control the surros robot
     rclcpp::init(argc, argv);
-    auto node = rclcpp::Node::make_shared("exercise1");
+    std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("exercise1");
     SurrosControl control = SurrosControl(node);
 
     // initialize the control
@@ -40,8 +40,8 @@ int main(int argc, char **argv)
         control.setJoints(joint_angles, rclcpp::Duration(duration));
 
         // wait for the robot to finish moving
-        rclcpp::sleep_for(duration);
-        rclcpp::sleep_for(std::chrono::seconds(2));
+        //rclcpp::sleep_for(duration);
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // get the robots joint angles
         std::vector<double> measured_joint_angles;
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
         }
     };
 
-    setAndGetJoints(1.0, 1.0, 1.0, 1.0, 1.0);
+    setAndGetJoints(1.0, 0.5, 1.0, 1.0, 1.0);
     setAndGetJoints(0.0, 1.0, 0.0, 1.0, 0.0);
     setAndGetJoints(-1.0, 1.0, -1.0, 1.0, -1.0);
 }

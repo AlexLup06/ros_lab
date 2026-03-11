@@ -22,10 +22,10 @@ int main(int argc, char **argv)
     //function given a specific pose executes it using the inverse kinematics method and measures the final executed pose
     auto pickAndPlace = [&] (Eigen::Vector3d& a,
             Eigen::Vector3d& b,
-            double hover_dist = 0.03,
+            double hover_dist = 0.05,
             int open_percentage = 10,
-            int close_percentage = 90,
-            const std::chrono::seconds duration = std::chrono::seconds(10)){
+            int close_percentage = 80,
+            const std::chrono::seconds duration = std::chrono::seconds(5)){
 
         // move to the default position
         control.setJointsDefault();
@@ -44,70 +44,64 @@ int main(int argc, char **argv)
 
         std::cout << "Above a \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(duration);
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // open the gripper fully
         control.setGripperJoint(open_percentage);
         std::cout << "Gripper open \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(2));
+        // add buffer time
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // lowering the gripper
         control.setEndeffectorPose(a, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
 
         std::cout << "A \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(1));
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // close the gripper to grab the block
         control.setGripperJoint(close_percentage);
         std::cout << "Gripper close \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(2));
+        // add buffer time
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // lift the block
         control.setEndeffectorPose(a_above, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
         std::cout << "Above a \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(1));
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // move the block above B
         control.setEndeffectorPose(b_above, psi, phi, rclcpp::Duration(duration));
         std::cout << "Above b \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(duration);
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // lower the block
         control.setEndeffectorPose(b, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
         std::cout << "B \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(1));
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // open the gripper fully to release
         control.setGripperJoint(open_percentage);
         std::cout << "Gripper open \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(2));
+        // add buffer time
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // lift the gripper
         control.setEndeffectorPose(b_above, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
         std::cout << "Above b \n";
 
-        // wait for the robot to finish moving
-        rclcpp::sleep_for(std::chrono::seconds(1));
+        // add buffer time
         rclcpp::sleep_for(std::chrono::milliseconds(500));
 
         // move to the default position
@@ -116,9 +110,12 @@ int main(int argc, char **argv)
         control.setGripperJoint(close_percentage);
     };
 
-    Eigen::Vector3d a(0.15, 0.0, 0.01);
-    Eigen::Vector3d b(0.0, 0.15, 0.01);
+    Eigen::Vector3d a(0.15, 0.0, 0.00);
+    Eigen::Vector3d b(0.0, 0.15, 0.00);
     
-    pickAndPlace(a, b);
-
+    while(true){
+        pickAndPlace(a, b);
+        pickAndPlace(b, a);
+    }
+    
 }

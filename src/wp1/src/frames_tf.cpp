@@ -48,6 +48,7 @@ int main(int argc, char** argv)
     broadcaster->sendTransform(tf_t2);
     broadcaster->sendTransform(tf_t3);
 
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }

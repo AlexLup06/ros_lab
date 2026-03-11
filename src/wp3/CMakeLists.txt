@@ -1,6 +1,5 @@
-
 cmake_minimum_required(VERSION 3.8)
-project(workpackage_2)
+project(workpackage_3)
 
 # Ensure local surros_lib package config is found
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/../../install/surros_lib/share/surros_lib/cmake")
@@ -31,6 +30,7 @@ find_package(surros_lib REQUIRED)
 #find_package(surros_hardware REQUIRED)
 find_package(surros_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -42,6 +42,9 @@ find_package(control_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(controller_manager_msgs REQUIRED)
+
+find_package(Sophus REQUIRED)
+find_package(fmt REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -56,14 +59,8 @@ if(BUILD_TESTING)
 endif()
 
 
-add_executable(exercise1
-  src/exercise1.cpp
-)
-add_executable(exercise2
-  src/exercise2.cpp
-)
-add_executable(exercise3
-  src/exercise3.cpp
+add_executable(robot_control
+  src/robot_control.cpp
 )
 
 # Add surros_lib include directory
@@ -77,34 +74,27 @@ include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_m
 
 # Add Eigen3 include directory
 include_directories("/usr/include/eigen3")
+include_directories("/opt/ros/humble/include")
 
 # # Link against surros_lib
-# target_link_libraries(workpackage_2_node
+# target_link_libraries(workpackage_3_node
 #     PRIVATE surros_lib
 #     PRIVATE surros_hardware
 # )
-target_link_libraries(exercise1
+target_link_libraries(robot_control
   ${surros_lib_LIBRARIES}
+  fmt::fmt
   #${surros_hardware_LIBRARIES}
 )
-target_link_libraries(exercise2
-  ${surros_lib_LIBRARIES}
-  #${surros_hardware_LIBRARIES}
-)
-target_link_libraries(exercise3
-  ${surros_lib_LIBRARIES}
-  #${surros_hardware_LIBRARIES}
-)
-
-
 
 # Link against ROS 2 libraries
-ament_target_dependencies(exercise1
+ament_target_dependencies(robot_control
   rclcpp
   surros_lib
   #surros_hardware
   surros_msgs
   sensor_msgs
+  nav_msgs
   Eigen3
   tf2_eigen
   tf2_ros
@@ -114,38 +104,8 @@ ament_target_dependencies(exercise1
   std_srvs
   interactive_markers
   controller_manager_msgs
-)
-ament_target_dependencies(exercise2
-  rclcpp
-  surros_lib
-  #surros_hardware
-  surros_msgs
-  sensor_msgs
-  Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
-)
-ament_target_dependencies(exercise3
-  rclcpp
-  surros_lib
-  #surros_hardware
-  surros_msgs
-  sensor_msgs
-  Eigen3
-  tf2_eigen
-  tf2_ros
-  visualization_msgs
-  std_msgs
-  control_msgs
-  std_srvs
-  interactive_markers
-  controller_manager_msgs
+  Sophus
+  #fmt
 )
 
 
@@ -155,20 +115,14 @@ install(DIRECTORY launch/
 )
 
 
-# Create the lib/workpackage_2 directory to satisfy ROS 2 launch requirements
-install(DIRECTORY DESTINATION lib/workpackage_2)
+# Create the lib/workpackage_3 directory to satisfy ROS 2 launch requirements
+install(DIRECTORY DESTINATION lib/workpackage_3)
 
 
 
-# Install the executable to lib/workpackage_2 for ROS 2 launch compatibility
-install(TARGETS exercise1
-  RUNTIME DESTINATION lib/workpackage_2
-)
-install(TARGETS exercise2
-  RUNTIME DESTINATION lib/workpackage_2
-)
-install(TARGETS exercise3
-  RUNTIME DESTINATION lib/workpackage_2
+# Install the executable to lib/workpackage_3 for ROS 2 launch compatibility
+install(TARGETS robot_control
+  RUNTIME DESTINATION lib/workpackage_3
 )
 
 ament_package()
