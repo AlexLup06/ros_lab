@@ -29,7 +29,7 @@ static std::string rpyToString(const robot::RpyVector &rpy, int precision = 3)
 
 struct TargetPose
 {
-    Eigen::Affine3d desired_pose;
+    Eigen::Vector3d desired_xyz;
     std::string label;
 };
 
@@ -44,44 +44,39 @@ int main(int argc, char **argv)
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-    // Define desired end-effector poses (T_base_tcp) here.
-    Eigen::Matrix3d R_down;
-    R_down << 1, 0, 0,
-        0, -1, 0,
-        0, 0, -1;
-
-    const double block_size = node->declare_parameter<double>("block_size", 0.025); // [m] edge length
+    const std::vector<double> pose_5_xyz = node->declare_parameter<std::vector<double>>(
+        "pose_5_xyz", {0.0, 0.15, 0.0});
+    const std::vector<double> pose_1_xyz = node->declare_parameter<std::vector<double>>(
+        "pose_1_xyz", {0.0, 0.10, 0.05});
+    const std::vector<double> pose_2_xyz = node->declare_parameter<std::vector<double>>(
+        "pose_2_xyz", {0.0, 0.10, 0.0});
+    const std::vector<double> pose_3_xyz = node->declare_parameter<std::vector<double>>(
+        "pose_3_xyz", {0.0, 0.13, 0.0});
+    const std::vector<double> pose_4_xyz = node->declare_parameter<std::vector<double>>(
+        "pose_4_xyz", {0.0, 0.15, 0.0});
+    const double tool_pitch = node->declare_parameter<double>("tool_pitch", 1.5);
+    const double tool_yaw = node->declare_parameter<double>("tool_yaw", 0.0);
 
     // List of target poses to visit
     std::vector<TargetPose> targets;
-    Eigen::Affine3d pose_1 = Eigen::Affine3d::Identity();
-    pose_1.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 2.0);
-    pose_1.linear() = R_down;
-    targets.push_back({pose_1,
-                       "pose_1"});
-    Eigen::Affine3d pose_2 = Eigen::Affine3d::Identity();
-    pose_2.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 0.5);
-    pose_2.linear() = R_down;
-    targets.push_back({pose_2, "pose_2"});
-
-    Eigen::Affine3d pose_3 = Eigen::Affine3d::Identity();
-    pose_3.translation() = Eigen::Vector3d(0.0, 0.12, block_size * 2.0);
-    pose_3.linear() = R_down;
-    targets.push_back({pose_3, "pose_3"});
-
-    Eigen::Affine3d pose_4 = Eigen::Affine3d::Identity();
-    pose_4.translation() = Eigen::Vector3d(0.0, 0.05, block_size * 2.0);
-    pose_4.linear() = R_down;
-    targets.push_back({pose_4, "pose_4"});
+        targets.push_back({Eigen::Vector3d(pose_5_xyz[0], pose_5_xyz[1], pose_5_xyz[2]), "pose_5"});
+    targets.push_back({Eigen::Vector3d(pose_1_xyz[0], pose_1_xyz[1], pose_1_xyz[2]), "pose_1"});
+    targets.push_back({Eigen::Vector3d(pose_2_xyz[0], pose_2_xyz[1], pose_2_xyz[2]), "pose_2"});
+    targets.push_back({Eigen::Vector3d(pose_3_xyz[0], pose_3_xyz[1], pose_3_xyz[2]), "pose_3"});
+    targets.push_back({Eigen::Vector3d(pose_4_xyz[0], pose_4_xyz[1], pose_4_xyz[2]), "pose_4"});
 
     for (size_t i = 0; i < targets.size(); ++i)
     {
         const auto &target = targets[i];
+        const Eigen::Affine3d desired_pose = robot::createPoseFromPosAndPitch(target.desired_xyz, tool_pitch, tool_yaw);
 
         RCLCPP_INFO(node->get_logger(), "Target %zu (%s): moving to desired pose.", i + 1, target.label.c_str());
 
-        // Command IK and wait for completion
-        surros.setEndeffectorPose(target.desired_pose, rclcpp::Duration(4, 0), false, true);
+        const bool success = surros.setEndeffectorPose(target.desired_xyz, tool_pitch, tool_yaw, rclcpp::Duration(3, 0), false, true);
+        if (!success)
+        {
+            RCLCPP_ERROR(node->get_logger(), "IK rejected target %zu (%s).", i + 1, target.label.c_str());
+        }
 
         rclcpp::sleep_for(std::chrono::milliseconds(300));
 
@@ -89,13 +84,13 @@ int main(int argc, char **argv)
         surros.getEndeffectorState(actual_pose);
 
         // Simple pose error check (position + orientation)
-        const Eigen::Vector3d pos_error = actual_pose.translation() - target.desired_pose.translation();
-        const Eigen::Vector3d ori_error = robot::computeOrientationError(target.desired_pose.linear(), actual_pose.linear());
+        const Eigen::Vector3d pos_error = actual_pose.translation() - desired_pose.translation();
+        const Eigen::Vector3d ori_error = robot::computeOrientationError(desired_pose.linear(), actual_pose.linear());
 
-        const robot::RpyVector desired_rpy = robot::convertRotMatToRpy(target.desired_pose.linear());
+        const robot::RpyVector desired_rpy = robot::convertRotMatToRpy(desired_pose.linear());
         const robot::RpyVector actual_rpy = robot::convertRotMatToRpy(actual_pose.linear());
 
-        RCLCPP_INFO(node->get_logger(), "Desired position: %s", vec3ToString(target.desired_pose.translation()).c_str());
+        RCLCPP_INFO(node->get_logger(), "Desired position: %s", vec3ToString(desired_pose.translation()).c_str());
         RCLCPP_INFO(node->get_logger(), "Actual position:  %s", vec3ToString(actual_pose.translation()).c_str());
         RCLCPP_INFO(node->get_logger(), "Position error:  %s | L2 norm: %.4f",
                     vec3ToString(pos_error).c_str(), pos_error.norm());

@@ -13,6 +13,15 @@
 using Vector5d = Eigen::Matrix<double, 5, 1>;
 using Matrix5d = Eigen::Matrix<double, 5, 5>;
 
+static Vector5d solveDampedLeastSquares(const Matrix5d& jacobian, const Vector5d& task_command, double damping)
+{
+    const double lambda_sq = damping * damping;
+    const Matrix5d damped_system =
+        jacobian * jacobian.transpose() + lambda_sq * Matrix5d::Identity();
+    const Vector5d workspace_solution = damped_system.ldlt().solve(task_command);
+    return jacobian.transpose() * workspace_solution;
+}
+
 struct Sample
 {
     Eigen::Vector3d pos;
@@ -120,7 +129,7 @@ int main(int argc, char** argv)
 
     // Trajectory parameters
     const std::vector<double> origin_xyz = node->declare_parameter<std::vector<double>>(
-        "origin_xyz", {p_start.x(), p_start.y(), p_start.z()});
+        "origin_xyz", {0.0, 0.10, 0.0});
     const double house_scale = node->declare_parameter<double>("house_scale", 0.06);
     const double z_level = node->declare_parameter<double>("z_level", origin_xyz.size() == 3 ? origin_xyz[2] : p_start.z());
 
@@ -128,8 +137,10 @@ int main(int argc, char** argv)
     const double dt = node->declare_parameter<double>("dt", 0.02);
     const bool use_feedforward = node->declare_parameter<bool>("use_feedforward", true);
 
-    const double kp_pos = node->declare_parameter<double>("kp_pos", 2.0);
-    const double kp_ori = node->declare_parameter<double>("kp_ori", 1.0);
+    const double kp_pos = node->declare_parameter<double>("kp_pos", 1.0);
+    const double kp_ori = node->declare_parameter<double>("kp_ori", 0.3);
+    const double damping = node->declare_parameter<double>("damping", 0.1);
+    const double max_joint_speed_scale = node->declare_parameter<double>("max_joint_speed_scale", 0.25);
 
     if (origin_xyz.size() != 3)
     {
@@ -162,7 +173,6 @@ int main(int argc, char** argv)
 
     const Eigen::Matrix3d R_des = R_start * R_tilt;
     const Eigen::Quaterniond q_des(R_des);
-    const robot::RpyVector rpy_des = robot::convertRotMatToRpy(R_des);
 
     // House of Nikolaus points in 2D (scaled) relative to origin
     const std::vector<Eigen::Vector2d> house_2d = {
@@ -211,6 +221,7 @@ int main(int argc, char** argv)
     K(4, 4) = kp_ori;
 
     rclcpp::Rate rate(1.0 / dt);
+    const robot::JointVector scaled_max_speeds = max_joint_speed_scale * robot.getMaxJointSpeeds();
 
     // Trajectory tracking loop
     for (size_t i = 0; i < samples.size() && rclcpp::ok(); ++i)
@@ -222,13 +233,13 @@ int main(int argc, char** argv)
 
         const Eigen::Vector3d p_cur = current_pose.translation();
         const Eigen::Matrix3d R_cur = current_pose.linear();
-        const robot::RpyVector rpy_cur = robot::convertRotMatToRpy(R_cur);
+        const Eigen::Vector3d orientation_error = robot::computeOrientationError(R_cur, R_des);
 
         // 5D error: position + (pitch,yaw)
         Vector5d e;
         e << (sample.pos - p_cur),
-             (rpy_des(1) - rpy_cur(1)),
-             (rpy_des(2) - rpy_cur(2));
+             orientation_error(1),
+             orientation_error(2);
 
         // Optional feedforward velocity
         Vector5d xd_dot = Vector5d::Zero();
@@ -241,8 +252,8 @@ int main(int argc, char** argv)
         robot::RobotJacobianReduced J;
         robot.getJacobianReduced(J);
 
-        Vector5d qdot = J.completeOrthogonalDecomposition().solve(xd_dot + K * e);
-        qdot = clampJointVel(qdot, robot.getMaxJointSpeeds());
+        Vector5d qdot = solveDampedLeastSquares(J, xd_dot + K * e, damping);
+        qdot = clampJointVel(qdot, scaled_max_speeds);
 
         robot::JointVector qdot_cmd = qdot;
         robot.setJointVel(qdot_cmd);

@@ -27,7 +27,20 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../../install")
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(surros_lib REQUIRED)
+#find_package(surros_hardware REQUIRED)
+find_package(surros_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+
+find_package(std_srvs REQUIRED)
+find_package(interactive_markers REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -52,6 +65,10 @@ add_executable(exercise2
 
 add_executable(exercise3
   src/exercise3.cpp
+)
+
+add_executable(exercise4
+  src/exercise4.cpp
 )
 
 # Add surros_lib include directory
@@ -83,23 +100,78 @@ target_link_libraries(exercise3
   #${surros_hardware_LIBRARIES}
 )
 
+target_link_libraries(exercise4
+  ${surros_lib_LIBRARIES}
+  #${surros_hardware_LIBRARIES}
+)
+
 # Link against ROS 2 libraries
 ament_target_dependencies(exercise1
   rclcpp
   surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
   Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
 )
 
 ament_target_dependencies(exercise2
   rclcpp
   surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
   Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
 )
 
 ament_target_dependencies(exercise3
   rclcpp
   surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
   Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+)
+
+ament_target_dependencies(exercise4
+  rclcpp
+  surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
 )
 
 
@@ -115,7 +187,7 @@ install(DIRECTORY DESTINATION lib/workpackage_2)
 
 
 # Install the executable to lib/workpackage_2 for ROS 2 launch compatibility
-install(TARGETS exercise1 exercise2 exercise3
+install(TARGETS exercise1 exercise2 exercise3 exercise4
   RUNTIME DESTINATION lib/workpackage_2
 )
 

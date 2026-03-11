@@ -23,19 +23,19 @@ int main(int argc, char **argv)
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
     // Parameters for pick/place positions and gripper settings
-    const std::vector<double> pick_xyz = node->declare_parameter<std::vector<double>>(
-        "pick_xyz", {0.0, 0.12, 0.0});
-    const std::vector<double> place_xyz = node->declare_parameter<std::vector<double>>(
-        "place_xyz", {0.0, 0.7, 0.0});
+    const std::vector<double> pick_xyz = node->declare_parameter<std::vector<double>>("pick_xyz", {0.0, 0.10, 0.0});
+    const std::vector<double> place_xyz = node->declare_parameter<std::vector<double>>("place_xyz", {0.04, 0.10, 0.0});
 
     const double block_size = node->declare_parameter<double>("block_size", 0.025);  // [m] edge length
     const double approach_z_offset = node->declare_parameter<double>("approach_z_offset", block_size * 2.0);
-    const double grasp_z_offset = node->declare_parameter<double>("grasp_z_offset", block_size * 0.5);
+    const double grasp_z_offset = node->declare_parameter<double>("grasp_z_offset", 0);
 
     const double move_speed = node->declare_parameter<double>("move_speed", 0.5);
+    const double tool_pitch = node->declare_parameter<double>("tool_pitch", 1.5);
+    const double tool_yaw = node->declare_parameter<double>("tool_yaw", 0.0);
 
-    const int gripper_open = node->declare_parameter<int>("gripper_open", 80);
-    const int gripper_closed = node->declare_parameter<int>("gripper_closed", 20);
+    const int gripper_open = node->declare_parameter<int>("gripper_open", 20);
+    const int gripper_closed = node->declare_parameter<int>("gripper_closed", 80);
 
     if (pick_xyz.size() != 3 || place_xyz.size() != 3)
     {
@@ -53,12 +53,6 @@ int main(int argc, char **argv)
     const Eigen::Vector3d place_above = place + Eigen::Vector3d(0.0, 0.0, approach_z_offset);
     const Eigen::Vector3d place_release = place + Eigen::Vector3d(0.0, 0.0, grasp_z_offset);
 
-    // Keep TCP z-axis pointing down
-    Eigen::Matrix3d R_down;
-    R_down << 1, 0, 0,
-              0, -1, 0,
-              0, 0, -1;
-
     // Pick-and-place sequence
     std::vector<Waypoint> sequence = {
         {pick_above, "above_pick"},
@@ -72,31 +66,45 @@ int main(int argc, char **argv)
     RCLCPP_INFO(node->get_logger(), "Pick-and-place sequence starting.");
 
     // Open gripper before approaching the object
+    RCLCPP_INFO(node->get_logger(), "Gripper action: open before sequence start.");
     surros.setGripperJoint(gripper_open, true);
 
     for (size_t i = 0; i < sequence.size(); ++i)
     {
         const auto& step = sequence[i];
 
-        // Command absolute pose in base_link
-        Eigen::Affine3d desired_pose = Eigen::Affine3d::Identity();
-        desired_pose.translation() = step.xyz;
-        desired_pose.linear() = R_down;
+        RCLCPP_INFO(
+            node->get_logger(),
+            "Sequence step %zu/%zu (%s): target xyz = [%.3f, %.3f, %.3f]",
+            i + 1,
+            sequence.size(),
+            step.label.c_str(),
+            step.xyz.x(),
+            step.xyz.y(),
+            step.xyz.z());
 
-        bool success = surros.setEndeffectorPose(desired_pose, move_speed, false, true);
+        const bool success = surros.setEndeffectorPose(step.xyz, tool_pitch, tool_yaw, move_speed, false, true);
         if (!success)
         {
-            RCLCPP_WARN(node->get_logger(), "IK failed at step %zu (%s).", i + 1, step.label.c_str());
-            continue;
+            RCLCPP_ERROR(
+                node->get_logger(),
+                "Sequence step %zu (%s) failed. Target xyz = [%.3f, %.3f, %.3f]",
+                i + 1,
+                step.label.c_str(),
+                step.xyz.x(),
+                step.xyz.y(),
+                step.xyz.z());
         }
 
         // Gripper actions at specific steps
         if (step.label == "grasp")
         {
+            RCLCPP_INFO(node->get_logger(), "Sequence step %zu (%s): closing gripper.", i + 1, step.label.c_str());
             surros.setGripperJoint(gripper_closed, true);
         }
         else if (step.label == "release")
         {
+            RCLCPP_INFO(node->get_logger(), "Sequence step %zu (%s): opening gripper.", i + 1, step.label.c_str());
             surros.setGripperJoint(gripper_open, true);
         }
     }
