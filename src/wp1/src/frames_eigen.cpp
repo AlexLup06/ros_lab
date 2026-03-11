@@ -108,6 +108,7 @@ int main(int argc, char **argv)
     visualizeFrame(T2, publisher, "T2");
     visualizeFrame(T3, publisher, "T3");
 
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }
