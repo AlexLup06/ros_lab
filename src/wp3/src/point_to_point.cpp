@@ -16,48 +16,6 @@ using Vector5d = Eigen::Matrix<double, 5, 1>;
 using Matrix5d = Eigen::Matrix<double, 5, 5>;
 using namespace Sophus;
 
-// desired position profile at time t when motion is supposed to last for t_end seconds
-Vector3d position_profile(const Vector3d& start_position, const Vector3d& end_position, double t, double t_end){
-    if(t > t_end){
-        return end_position;
-    }
-    double tau = t/t_end;
-    /*double s = 3*tau*tau - 2*tau*tau*tau;
-    //double s = tau;
-
-    return start_position + s*(end_position-start_position);*/
-
-    double omega = std::acos(start_position.dot(end_position));
-
-    return std::sin((1-tau)*omega)/std::sin(omega)*start_position+std::sin(tau*omega)/std::sin(omega)*end_position;
-}
-
-// desired position profile at time t when motion is supposed to last for t_end seconds
-Vector3d linear_velocity_profile(const Vector3d& start_position, const Vector3d& end_position, double t, double t_end){
-    if(t > t_end){
-        return Vector3d(0.0, 0.0, 0.0);
-    }
-    
-    double tau = t/t_end;
-    /*double s_dot = (6*tau - 6*tau*tau)/t_end;
-    //double s_dot = 1/t_end;
-
-    return s_dot*(end_position-start_position);
-    */
-
-    double omega = std::acos(start_position.dot(end_position));
-
-    return -omega/t_end*std::cos((1-tau)*omega)/std::sin(omega)*start_position+omega/t_end*std::cos(tau*omega)/std::sin(omega)*end_position;
-
-}
-
-// desired orientation profile at time t when motion is supposed to last for t_end seconds
-Eigen::Quaterniond orientation_profile(const Eigen::Quaterniond& start_orientation, const Eigen::Quaterniond& end_orientation, double t, double t_end){
-    if(t > t_end){
-        return end_orientation;
-    }
-    return start_orientation.slerp(t/t_end, end_orientation);
-}
 
 // =============== Main function =================
 int main(int argc, char** argv)
@@ -72,32 +30,23 @@ int main(int argc, char** argv)
     auto publisher = node->create_publisher<std_msgs::msg::Float64MultiArray>("control_error", 10); //topic not found, message not displaying
 
     // desired pose
-    const Vector3d end_position(-0.3, 0.0, 0.1);
+    const Vector3d end_position(0.25, 0.0, 0.1);
     const Eigen::Quaterniond end_quaternion(robot::convertRpyToRotMat(Vector3d(0.0,0.0,0.0)));
 
     // duration of robot motion
-    double t_end = 5; // in seconds
+    double t_end = 10; // in seconds
     
     // move to the default position
     robot.setJointsDefault();
-    // get the start pose and convert it to a 5d vector
-    Eigen::Affine3d start_pose_matrix;
-    robot.getEndeffectorState(start_pose_matrix);
-    const Eigen::Quaterniond start_quaternion(start_pose_matrix.rotation());
-    const Vector3d start_position = start_pose_matrix.translation();
 
-    // constant velocity trajectory
-    //const Vector3d desired_linear_velocity= 1/t_end*(end_position-start_position);
-    //const Eigen::Quaterniond desired_angular_velocity = (end_quaternion*start_quaternion.inverse());
-    //Vector5d desired_velocity(desired_linear_velocity(0), desired_linear_velocity(1), desired_linear_velocity(2), 0.0, 0.0);
-    //const Vector5d desired_velocity(0.0, 0.0, 0.0, 0.0, 0.0);
+    // maximum joint velocity
+    Vector5d max_joint_velocity(10.0, 10.0, 10.0, 10.0, 10.0);
 
     //Kinematics position error control -> calculates the joint velocities
     auto inverseKinematicsControl = [&](const Vector3d& x_e_position,
         const Vector3d& x_d_position,
         const Eigen::Quaterniond& x_e_orientation,
         const Eigen::Quaterniond& x_d_orientation,
-        const Vector5d& desired_velocity,
         Vector5d& joint_velocity){
 
             // get the reduced Jacobian
@@ -130,35 +79,43 @@ int main(int argc, char** argv)
 
             // define Gain Matrix
             Matrix5d k = Matrix5d::Identity();
-            k(0,0) = 2;
-            k(1,1) = 2;
-            k(2,2) = 2;
-            k(3,3) = 1;
-            k(4,4) = 1;
+            k(0,0) = 1.5;
+            k(1,1) = 1.5;
+            k(2,2) = 1.5;
+            k(3,3) = 1.0;
+            k(4,4) = 1.0;
 
             // calculate joint velocity
-            joint_velocity = pseudo_inverse*(desired_velocity+k*e);
+            joint_velocity = pseudo_inverse*(k*e);
+
+            std::cout << "Calculated Joint Velocities: \n" << joint_velocity <<"\n";
+
+            for(int i=0; i<5; i++){
+                if (std::abs(joint_velocity(i))> std::abs(max_joint_velocity(i)))
+                {
+                    // clamp joint velocity to a max value
+                    if(joint_velocity(i) >=0){
+                        joint_velocity(i) = max_joint_velocity(i);
+                    }
+                    else{
+                        joint_velocity(i) = -max_joint_velocity(i);
+                    }
+                }
+                
+            }
     };
 
     
-    int delta_t = 10; // in milliseconds
+    int delta_t = 20; // in milliseconds
     
-    for (double t = 0.0; t <= t_end + 5.0; t+= delta_t/1000.0)
+    for (double t = 0.0; t <= t_end; t+= delta_t/1000.0)
     {
-        Vector3d desired_position = position_profile(start_position, end_position, t, t_end); //computing the current desired position
-        Eigen::Quaterniond desired_quaternion = orientation_profile(start_quaternion, end_quaternion, t, t_end); //computing the current desired orientation
-        Vector3d desired_linear_velocity = linear_velocity_profile(start_position, end_position, t, t_end);
-        Vector5d desired_velocity(desired_linear_velocity(0), desired_linear_velocity(1), desired_linear_velocity(2), 0.0, 0.0);
-
-        std::cout << "Desired Position: \n" << desired_position << "\n";
 
         // get the current pose and convert it to a 5d vector
         Eigen::Affine3d current_pose_matrix;
         robot.getEndeffectorState(current_pose_matrix);
         Eigen::Quaterniond current_quaternion(current_pose_matrix.rotation());
         Vector3d current_position(current_pose_matrix(0,3), current_pose_matrix(1,3), current_pose_matrix(2,3));
-        //Vector3d current_rpy = robot::convertRotMatToRpy(current_pose_matrix.rotation());
-        // Vector5d current_pose(current_pose_matrix(0,3), current_pose_matrix(1,3), current_pose_matrix(2,3), current_quaternion.x(), current_quaternion.y());
 
         // get the current joint angles configuration
         Vector5d joint_angles;
@@ -177,7 +134,7 @@ int main(int argc, char** argv)
 
         // get the joint velocity through inverse kinematics
         Vector5d joint_velocity;
-        inverseKinematicsControl(current_position, desired_position, current_quaternion, desired_quaternion, desired_velocity, joint_velocity);
+        inverseKinematicsControl(current_position, end_position, current_quaternion, end_quaternion, joint_velocity);
 
 
         //set the current joint velocity that was computed

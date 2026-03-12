@@ -62,6 +62,9 @@ endif()
 add_executable(robot_control
   src/robot_control.cpp
 )
+add_executable(point_to_point
+  src/point_to_point.cpp
+)
 
 # Add surros_lib include directory
 include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/include")
@@ -86,9 +89,33 @@ target_link_libraries(robot_control
   fmt::fmt
   #${surros_hardware_LIBRARIES}
 )
+target_link_libraries(point_to_point
+  ${surros_lib_LIBRARIES}
+  fmt::fmt
+  #${surros_hardware_LIBRARIES}
+)
 
 # Link against ROS 2 libraries
 ament_target_dependencies(robot_control
+  rclcpp
+  surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
+  nav_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+  Sophus
+  #fmt
+)
+ament_target_dependencies(point_to_point
   rclcpp
   surros_lib
   #surros_hardware
@@ -122,6 +149,9 @@ install(DIRECTORY DESTINATION lib/workpackage_3)
 
 # Install the executable to lib/workpackage_3 for ROS 2 launch compatibility
 install(TARGETS robot_control
+  RUNTIME DESTINATION lib/workpackage_3
+)
+install(TARGETS point_to_point
   RUNTIME DESTINATION lib/workpackage_3
 )
 
