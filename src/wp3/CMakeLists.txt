@@ -65,6 +65,9 @@ add_executable(robot_control
 add_executable(point_to_point
   src/point_to_point.cpp
 )
+add_executable(house
+  src/house.cpp
+)
 
 # Add surros_lib include directory
 include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/include")
@@ -90,6 +93,11 @@ target_link_libraries(robot_control
   #${surros_hardware_LIBRARIES}
 )
 target_link_libraries(point_to_point
+  ${surros_lib_LIBRARIES}
+  fmt::fmt
+  #${surros_hardware_LIBRARIES}
+)
+target_link_libraries(house
   ${surros_lib_LIBRARIES}
   fmt::fmt
   #${surros_hardware_LIBRARIES}
@@ -134,7 +142,25 @@ ament_target_dependencies(point_to_point
   Sophus
   #fmt
 )
-
+ament_target_dependencies(house
+  rclcpp
+  surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
+  nav_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+  Sophus
+  #fmt
+)
 
 # Install launch files
 install(DIRECTORY launch/
@@ -152,6 +178,9 @@ install(TARGETS robot_control
   RUNTIME DESTINATION lib/workpackage_3
 )
 install(TARGETS point_to_point
+  RUNTIME DESTINATION lib/workpackage_3
+)
+install(TARGETS house
   RUNTIME DESTINATION lib/workpackage_3
 )
 
