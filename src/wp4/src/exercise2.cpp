@@ -9,6 +9,7 @@
 #include <map>
 #include <algorithm>
 #include <thread>
+#include <cmath>
 #include <cctype>
 
 using namespace cv;
@@ -86,7 +87,7 @@ static vector<Cube> detectCubesByColor(const Mat &bgr)
 
 static Eigen::Affine3d makePoseDown(const Eigen::Vector3d &xyz, double yaw_rad)
 {
-    // Build a pose with TCP z-axis pointing down
+    // Build a pose with TCP z-axis pointing down, but slightly tilted.
     Eigen::Matrix3d R_down;
     R_down << 1, 0, 0,
         0, -1, 0,
@@ -97,9 +98,15 @@ static Eigen::Affine3d makePoseDown(const Eigen::Vector3d &xyz, double yaw_rad)
         sin(yaw_rad), cos(yaw_rad), 0,
         0, 0, 1;
 
+    const double tilt_rad = 25.0 * std::acos(-1.0) / 180.0;
+    Eigen::Matrix3d Ry;
+    Ry << cos(tilt_rad), 0, sin(tilt_rad),
+        0, 1, 0,
+        -sin(tilt_rad), 0, cos(tilt_rad);
+
     Eigen::Affine3d pose = Eigen::Affine3d::Identity();
     pose.translation() = xyz;
-    pose.linear() = Rz * R_down;
+    pose.linear() = Rz * Ry * R_down;
     return pose;
 }
 
@@ -108,10 +115,9 @@ static bool moveToPose(robot::SurrosControl &surros,
                        double yaw_rad,
                        double speed)
 {
-    // Send an absolute pose in base_link
-    Eigen::Affine3d pose = makePoseDown(xyz, yaw_rad);
-    surros.setEndeffectorPose(pose, speed, false, true);
-    return true;
+    // Use the 5D IK interface directly so failed IK is reported.
+    const double tool_pitch = 1.2; // slightly angled instead of straight down (pi/2)
+    return surros.setEndeffectorPose(xyz, tool_pitch, yaw_rad, speed, false, true);
 }
 
 int main(int argc, char **argv)
@@ -124,6 +130,7 @@ int main(int argc, char **argv)
 
     // Initialize the SurrosControl instance
     surros_control->initialize();
+    rclcpp::sleep_for(std::chrono::milliseconds(500));
 
     string default_image_path = "test_image.jpeg";
     try
@@ -181,9 +188,9 @@ int main(int argc, char **argv)
     }
 
     // Parameters for block positions (base_link) and stacking
-    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.2, 0.175, 0.0});
+    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.083, 0.179, 0.0});
     const vector<double> middle_xyz = node_->declare_parameter<vector<double>>("middle_xyz", {0, 0.20, 0.0});
-    const vector<double> right_xyz = node_->declare_parameter<vector<double>>("right_xyz", {0.2, 0.175, 0.0});
+    const vector<double> right_xyz = node_->declare_parameter<vector<double>>("right_xyz", {0.083, 0.179, 0.0});
 
     const double left_yaw = node_->declare_parameter<double>("left_yaw", 0.3);
     const double middle_yaw = node_->declare_parameter<double>("middle_yaw", 0.0);
@@ -277,16 +284,40 @@ int main(int argc, char **argv)
 
         // Pick
         surros_control->setGripperJoint(gripper_open, true);
-        moveToPose(*surros_control, pick_above, pick_pose.yaw, move_speed);
-        moveToPose(*surros_control, pick_grasp, pick_pose.yaw, move_speed);
+        if (!moveToPose(*surros_control, pick_above, pick_pose.yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to reach pick_above pose for %s.", color.c_str());
+            continue;
+        }
+        if (!moveToPose(*surros_control, pick_grasp, pick_pose.yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to reach pick_grasp pose for %s.", color.c_str());
+            continue;
+        }
         surros_control->setGripperJoint(gripper_closed, true);
-        moveToPose(*surros_control, pick_above, pick_pose.yaw, move_speed);
+        if (!moveToPose(*surros_control, pick_above, pick_pose.yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to lift %s after grasp.", color.c_str());
+            continue;
+        }
 
         // Place
-        moveToPose(*surros_control, place_above, stack_yaw, move_speed);
-        moveToPose(*surros_control, place_grasp, stack_yaw, move_speed);
+        if (!moveToPose(*surros_control, place_above, stack_yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to reach place_above pose for %s.", color.c_str());
+            continue;
+        }
+        if (!moveToPose(*surros_control, place_grasp, stack_yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to reach place_grasp pose for %s.", color.c_str());
+            continue;
+        }
         surros_control->setGripperJoint(gripper_open, true);
-        moveToPose(*surros_control, place_above, stack_yaw, move_speed);
+        if (!moveToPose(*surros_control, place_above, stack_yaw, move_speed))
+        {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to retreat after placing %s.", color.c_str());
+            continue;
+        }
 
         idx += 1;
     }
