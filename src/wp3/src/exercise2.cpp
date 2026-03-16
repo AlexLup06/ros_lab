@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     Eigen::Quaterniond q0(R0);
 
     // Define the house positions
-    const std::vector<double> origin_xyz = {0.0, 0.10, 0.0};
+    const std::vector<double> origin_xyz = {0.0, 0.12, 0.0};
     const double house_scale = 0.06;
     const double z_level = origin_xyz[2];
 

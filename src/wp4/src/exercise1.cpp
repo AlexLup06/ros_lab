@@ -1,5 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
-#include <surros_lib/surros_interface.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
@@ -76,20 +76,30 @@ static vector<Cube> detectCubesByColor(const Mat& bgr)
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
-    // ROS node + robot interface (not used yet, but initialized)
+    // Vision-only node; no robot interface is needed for this exercise.
     auto node_ = std::make_shared<rclcpp::Node>("wp4_exercise1");
-    auto surros_control = std::make_shared<robot::SurrosControl>(node_);
 
-    // Initialize the SurrosControl instance
-    surros_control->initialize();
+    string default_image_path = "test_image.jpeg";
+    try
+    {
+        default_image_path =
+            ament_index_cpp::get_package_share_directory("workpackage_4") + "/test_image.jpeg";
+    }
+    catch (const std::exception& e)
+    {
+        RCLCPP_WARN(node_->get_logger(),
+                    "Could not resolve package share directory, falling back to '%s': %s",
+                    default_image_path.c_str(),
+                    e.what());
+    }
 
-    // 1) Load the provided image (e.g., test_image.jpeg)
-    const string image_path = (argc > 1) ? argv[1] : "test_image.jpeg";
+    // Load the image path from a ROS parameter so launch does not pass '--ros-args' as a filename.
+    const string image_path = node_->declare_parameter<string>("image_path", default_image_path);
 
     Mat img = imread(image_path);
     if (img.empty())
     {
-        cerr << "Failed to load image: " << image_path << endl;
+        RCLCPP_ERROR(node_->get_logger(), "Failed to load image: %s", image_path.c_str());
         return 1;
     }
 

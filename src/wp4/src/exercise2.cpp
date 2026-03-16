@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <surros_lib/surros_interface.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
@@ -124,18 +125,27 @@ int main(int argc, char **argv)
     // Initialize the SurrosControl instance
     surros_control->initialize();
 
-    rclcpp::executors::SingleThreadedExecutor executor;
-    executor.add_node(node_);
-    std::thread spin_thread([&executor]()
-                            { executor.spin(); });
+    string default_image_path = "test_image.jpeg";
+    try
+    {
+        default_image_path =
+            ament_index_cpp::get_package_share_directory("workpackage_4") + "/test_image.jpeg";
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_WARN(node_->get_logger(),
+                    "Could not resolve package share directory, falling back to '%s': %s",
+                    default_image_path.c_str(),
+                    e.what());
+    }
 
-    // 1) Load the provided image (e.g., test_image.jpeg)
-    const string image_path = (argc > 1) ? argv[1] : "test_image.jpeg";
+    // Load the image path from a ROS parameter so launch does not pass '--ros-args' as a filename.
+    const string image_path = node_->declare_parameter<string>("image_path", default_image_path);
 
     Mat img = imread(image_path);
     if (img.empty())
     {
-        cerr << "Failed to load image: " << image_path << endl;
+        RCLCPP_ERROR(node_->get_logger(), "Failed to load image: %s", image_path.c_str());
         return 1;
     }
 
@@ -171,20 +181,20 @@ int main(int argc, char **argv)
     }
 
     // Parameters for block positions (base_link) and stacking
-    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.2, 0.10, 0.0});
-    const vector<double> middle_xyz = node_->declare_parameter<vector<double>>("middle_xyz", {0, 0.12, 0.0});
-    const vector<double> right_xyz = node_->declare_parameter<vector<double>>("right_xyz", {0.2, 0.10, 0.0});
+    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.2, 0.175, 0.0});
+    const vector<double> middle_xyz = node_->declare_parameter<vector<double>>("middle_xyz", {0, 0.20, 0.0});
+    const vector<double> right_xyz = node_->declare_parameter<vector<double>>("right_xyz", {0.2, 0.175, 0.0});
 
     const double left_yaw = node_->declare_parameter<double>("left_yaw", 0.3);
     const double middle_yaw = node_->declare_parameter<double>("middle_yaw", 0.0);
     const double right_yaw = node_->declare_parameter<double>("right_yaw", -0.3);
 
-    const vector<double> stack_xyz = node_->declare_parameter<vector<double>>("stack_xyz", {0.18, 0.05, 0.0});
+    const vector<double> stack_xyz = node_->declare_parameter<vector<double>>("stack_xyz", {0.15, 0.07, 0.0});
     const double stack_yaw = node_->declare_parameter<double>("stack_yaw", 0.0);
 
     const double block_size = node_->declare_parameter<double>("block_size", 0.025);
-    const double approach_z_offset = node_->declare_parameter<double>("approach_z_offset", block_size * 2.0);
-    const double grasp_z_offset = node_->declare_parameter<double>("grasp_z_offset", block_size * 0.5);
+    const double approach_z_offset = node_->declare_parameter<double>("approach_z_offset", 0.06);
+    const double grasp_z_offset = node_->declare_parameter<double>("grasp_z_offset", 0.0);
     const double move_speed = node_->declare_parameter<double>("move_speed", 0.5);
     const int gripper_open = node_->declare_parameter<int>("gripper_open", 80);
     const int gripper_closed = node_->declare_parameter<int>("gripper_closed", 20);
@@ -194,8 +204,6 @@ int main(int argc, char **argv)
     if (left_xyz.size() != 3 || middle_xyz.size() != 3 || right_xyz.size() != 3 || stack_xyz.size() != 3)
     {
         RCLCPP_ERROR(node_->get_logger(), "left_xyz, middle_xyz, right_xyz, stack_xyz must be 3-element vectors.");
-        executor.cancel();
-        spin_thread.join();
         rclcpp::shutdown();
         return 1;
     }
@@ -283,8 +291,6 @@ int main(int argc, char **argv)
         idx += 1;
     }
 
-    executor.cancel();
-    spin_thread.join();
     rclcpp::shutdown();
     return 0;
 }
