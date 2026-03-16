@@ -169,7 +169,10 @@ void KinematicModel::computeJacobianReduced(const Eigen::Ref<const JointVector>&
     RobotJacobian jac_full; // I added a column to this type as we got another joint
     computeJacobian(joint_values, jac_full, _tf_buffer);
     jacobian4d.topRows<3>()   = jac_full.topRows<3>();
-    jacobian4d.bottomRows<2>() = jac_full.bottomRows<2>();
+    //jacobian4d.bottomRows<2>()   = jac_full.bottomRows<2>();
+    //changed to second to last rows
+    jacobian4d.row(3) = jac_full.row(3);
+    jacobian4d.row(4) = jac_full.row(4);
     // jacobian4d.coeffRef(3, 0) = 0.0;
     // jacobian4d.bottomRightCorner<1, 3>().setConstant(1.0);
 }
