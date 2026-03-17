@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
     // Point-to-point target in base_link.
     const std::vector<double> target_xyz = node->declare_parameter<std::vector<double>>(
-        "target_xyz", {0.0, 0.12, 0.0});
+        "target_xyz", {0.0, 0.13, 0.0});
 
     const Eigen::Vector3d p1(target_xyz[0], target_xyz[1], target_xyz[2]);
 

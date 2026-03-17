@@ -1,5 +1,8 @@
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include <Eigen/Dense>
 #include <chrono>
@@ -47,12 +50,51 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
     auto node = rclcpp::Node::make_shared("wp3_exercise2");
 
+    const std::string trajectory_frame_id =
+        node->declare_parameter<std::string>("trajectory_frame_id", "base_link");
+
     // Robot interface
     robot::SurrosControl robot(node);
     robot.initialize();
 
     // Publish control error for rqt_plot
     auto error_pub = node->create_publisher<std_msgs::msg::Float64MultiArray>("/wp3/ex2/control_error", 10);
+    const auto path_qos = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable();
+    auto desired_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("/wp3/ex2/desired_trajectory_marker", path_qos);
+    auto actual_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("/wp3/ex2/actual_trajectory_marker", path_qos);
+
+    nav_msgs::msg::Path desired_path_msg;
+    desired_path_msg.header.frame_id = trajectory_frame_id;
+    nav_msgs::msg::Path actual_path_msg;
+    actual_path_msg.header.frame_id = trajectory_frame_id;
+
+    visualization_msgs::msg::Marker desired_marker_msg;
+    desired_marker_msg.header.frame_id = trajectory_frame_id;
+    desired_marker_msg.ns = "wp3_ex2";
+    desired_marker_msg.id = 0;
+    desired_marker_msg.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    desired_marker_msg.action = visualization_msgs::msg::Marker::ADD;
+    desired_marker_msg.scale.x = 0.002;
+    desired_marker_msg.scale.y = 0.002;
+    desired_marker_msg.color.r = 0.10f;
+    desired_marker_msg.color.g = 0.75f;
+    desired_marker_msg.color.b = 0.20f;
+    desired_marker_msg.color.a = 1.0f;
+    desired_marker_msg.pose.orientation.w = 1.0;
+
+    visualization_msgs::msg::Marker actual_marker_msg;
+    actual_marker_msg.header.frame_id = trajectory_frame_id;
+    actual_marker_msg.ns = "wp3_ex2";
+    actual_marker_msg.id = 1;
+    actual_marker_msg.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    actual_marker_msg.action = visualization_msgs::msg::Marker::ADD;
+    actual_marker_msg.scale.x = 0.002;
+    actual_marker_msg.scale.y = 0.002;
+    actual_marker_msg.color.r = 0.95f;
+    actual_marker_msg.color.g = 0.20f;
+    actual_marker_msg.color.b = 0.15f;
+    actual_marker_msg.color.a = 1.0f;
+    actual_marker_msg.pose.orientation.w = 1.0;
 
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
@@ -66,8 +108,8 @@ int main(int argc, char **argv)
     Eigen::Quaterniond q0(R0);
 
     // Define the house positions
-    const std::vector<double> origin_xyz = {0.0, 0.12, 0.0};
-    const double house_scale = 0.06;
+    const std::vector<double> origin_xyz = {0.0, 0.13, 0.03};
+    const double house_scale = 0.04;
     const double z_level = origin_xyz[2];
 
     // Target orientation in base_link parameterized by psi/phi.
@@ -88,7 +130,6 @@ int main(int argc, char **argv)
         {0.5, 1.5},
         {0.0, 1.0},
         {1.0, 0.0},
-        {1.0, 1.0}
     };
 
     // Transform the 2D house points into 3D world coordinates
@@ -104,8 +145,8 @@ int main(int argc, char **argv)
 
     // Trajectory and control parameters
     const double total_time = node->declare_parameter<double>("total_time", 8.0);
-    const double settle_time = node->declare_parameter<double>("settle_time", 2.0);
-    const double dt = node->declare_parameter<double>("dt", 0.02);
+    const double settle_time = node->declare_parameter<double>("settle_time", 0.0);
+    const double dt = node->declare_parameter<double>("dt", 0.04);
     const double kp_pos = node->declare_parameter<double>("kp_pos", 2.0);
     const double kp_ori = node->declare_parameter<double>("kp_ori", 0.05);
     const double damping = node->declare_parameter<double>("damping", 0.08);
@@ -172,6 +213,7 @@ int main(int argc, char **argv)
             // Compute error in position and orientation
             const Eigen::Vector3d p_cur = current_pose.translation();
             const Eigen::Matrix3d R_cur = current_pose.linear();
+            const Eigen::Quaterniond q_cur(R_cur);
             const Eigen::Vector3d ori_error = robot::computeOrientationError(R_cur, R_des);
 
             // 5D error: position + (pitch,yaw)
@@ -196,6 +238,24 @@ int main(int argc, char **argv)
             std_msgs::msg::Float64MultiArray err_msg;
             err_msg.data.assign({e(0), e(1), e(2), e(3), e(4)});
             error_pub->publish(err_msg);
+
+            const rclcpp::Time stamp = node->now();
+
+            geometry_msgs::msg::Point desired_point;
+            desired_point.x = p_des.x();
+            desired_point.y = p_des.y();
+            desired_point.z = p_des.z();
+            desired_marker_msg.header.stamp = stamp;
+            desired_marker_msg.points.push_back(desired_point);
+            desired_marker_pub->publish(desired_marker_msg);
+
+            geometry_msgs::msg::Point actual_point;
+            actual_point.x = p_cur.x();
+            actual_point.y = p_cur.y();
+            actual_point.z = p_cur.z();
+            actual_marker_msg.header.stamp = stamp;
+            actual_marker_msg.points.push_back(actual_point);
+            actual_marker_pub->publish(actual_marker_msg);
 
             // Spin and sleep to maintain loop rate
             rclcpp::spin_some(node);
