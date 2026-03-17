@@ -90,9 +90,16 @@ static bool moveToPose(robot::SurrosControl &surros,
                        double yaw_rad,
                        double speed)
 {
-    // Use the 5D IK interface directly so failed IK is reported.
-    const double tool_pitch = 1.05; // slightly angled instead of straight down (pi/2)
-    return surros.setEndeffectorPose(xyz, tool_pitch, yaw_rad, speed, false, true);
+    // Try a small set of tool pitch angles and keep the first IK solution that works.
+    const vector<double> tool_pitch_candidates = {1.05, 1.00, 1.10, 0.95, 1.15};
+    for (double tool_pitch : tool_pitch_candidates)
+    {
+        if (surros.setEndeffectorPose(xyz, tool_pitch, yaw_rad, speed, false, true))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 int main(int argc, char **argv)
@@ -163,7 +170,7 @@ int main(int argc, char **argv)
     }
 
     // Parameters for block positions (base_link) and stacking
-    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.068, 0.179, 0.0});
+    const vector<double> left_xyz = node_->declare_parameter<vector<double>>("left_xyz", {-0.078, 0.19, 0.0});
     const vector<double> middle_xyz = node_->declare_parameter<vector<double>>("middle_xyz", {0.017, 0.20, 0.0});
     const vector<double> right_xyz = node_->declare_parameter<vector<double>>("right_xyz", {0.098, 0.179, 0.0});
 
@@ -176,7 +183,7 @@ int main(int argc, char **argv)
 
     const double block_size = node_->declare_parameter<double>("block_size", 0.03);
     const double approach_z_offset = node_->declare_parameter<double>("approach_z_offset", 0.06);
-    const double grasp_z_offset = node_->declare_parameter<double>("grasp_z_offset", 0.0);
+    const double grasp_z_offset = node_->declare_parameter<double>("grasp_z_offset", 0.01);
     const double move_speed = node_->declare_parameter<double>("move_speed", 0.5);
     const double action_wait_s = node_->declare_parameter<double>("action_wait_s", 1.0);
     const int gripper_open = node_->declare_parameter<int>("gripper_open", 20);
@@ -317,6 +324,11 @@ int main(int argc, char **argv)
         setGripperAndWait(gripper_open);
         if (!moveAndWait(place_above, stack_yaw,
                          "Failed to retreat after placing " + color + "."))
+        {
+            continue;
+        }
+                if (!moveAndWait(place_above, stack_yaw,
+                         "Failed to reach place_above pose for " + color + "."))
         {
             continue;
         }

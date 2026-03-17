@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 
     // Trajectory and control parameters
     const double total_time = node->declare_parameter<double>("total_time", 8.0);
-    const double settle_time = node->declare_parameter<double>("settle_time", 0.0);
+    const double settle_time = node->declare_parameter<double>("settle_time", 4.0);
     const double dt = node->declare_parameter<double>("dt", 0.04);
     const double kp_pos = node->declare_parameter<double>("kp_pos", 2.0);
     const double kp_ori = node->declare_parameter<double>("kp_ori", 0.05);
