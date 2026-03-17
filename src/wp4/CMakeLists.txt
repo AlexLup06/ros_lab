@@ -61,6 +61,9 @@ endif()
 add_executable(robot_control
   src/robot_control.cpp
 )
+add_executable(stacking
+  src/stacking.cpp
+)
 
 # Add surros_lib include directory
 include_directories("${CMAKE_SOURCE_DIR}/../2025-pa-tekempel-gravemeier/surros_lib/include")
@@ -87,9 +90,30 @@ target_link_libraries(robot_control
   #${surros_hardware_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
+target_link_libraries(stacking
+  ${surros_lib_LIBRARIES}
+  #${surros_hardware_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
 # Link against ROS 2 libraries
 ament_target_dependencies(robot_control
+  rclcpp
+  surros_lib
+  #surros_hardware
+  surros_msgs
+  sensor_msgs
+  Eigen3
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
+  std_msgs
+  control_msgs
+  std_srvs
+  interactive_markers
+  controller_manager_msgs
+)
+ament_target_dependencies(stacking
   rclcpp
   surros_lib
   #surros_hardware
@@ -120,6 +144,9 @@ install(DIRECTORY DESTINATION lib/workpackage_4)
 
 # Install the executable to lib/workpackage_4 for ROS 2 launch compatibility
 install(TARGETS robot_control
+  RUNTIME DESTINATION lib/workpackage_4
+)
+install(TARGETS stacking
   RUNTIME DESTINATION lib/workpackage_4
 )
 
