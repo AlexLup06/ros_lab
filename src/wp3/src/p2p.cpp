@@ -193,11 +193,13 @@ int main(int argc, char** argv)
 
     // -------------- Control Loop --------------------------------
     for(double t = 0.0; t < t_end; t+=delta_t){
+        // get the current pose error between desired and actual pose
         Vector5d error = getPoseError(desired_pose, robot);
         //std::cout << "Current Pose Error: \n" << error << "\n";
 
         publishError(error, publisher);
 
+        // check if the pose threshold was reached, if so stop the control loop
         double threshold_position = 0.005;
         double threshold_orientation = 0.05;
         if(std::abs(error(0)) < threshold_position && std::abs(error(1)) < threshold_position && std::abs(error(2)) < threshold_position && std::abs(error(3)) < threshold_orientation && std::abs(error(4)) < threshold_orientation){
@@ -205,14 +207,18 @@ int main(int argc, char** argv)
             break;
         }
         
+        // compute the joint velocities with the inverse kinematics control
         Vector5d joint_velocities = inverseKinematicsControl(error, robot);
         //std::cout << "Current Joint Velocities: \n" << joint_velocities << "\n";
         //limitJointVel(joint_velocities);
 
+        // set the joint velocities
         robot.setJointVel(joint_velocities);
+        // wait for delta_t befor updating to new joint velocities
         rclcpp::sleep_for(std::chrono::milliseconds(delta_t));
     }
 
+    // stop the motion
     robot.setJointVel(Vector5d::Zero());
 
     // Get and Print the ending End Effector Pose

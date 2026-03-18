@@ -18,6 +18,8 @@ using Matrix3x2 = Eigen::Matrix<double, 3, 2>;
 using namespace Sophus;
 
 // ========================= Velocity and Pose Profiles ============================================================
+// return the linear interpolation of the start and end point at time t, 
+// where at time t_start the start_point should be reached and at time t_end the end point should be reached
 Vector3d linear_position_profile(Vector3d start_point, Vector3d end_point, double t, double t_start, double t_end){
     if(t> t_end){
         return end_point;
@@ -29,6 +31,8 @@ Vector3d linear_position_profile(Vector3d start_point, Vector3d end_point, doubl
     return start_point+(t-t_start)/(t_end-t_start)*(end_point-start_point);
 }
 
+// return the velocity of the interpolation in linear_position_profile
+// for each line the velocity is constant
 Vector3d linear_velocity_profile(Vector3d start_point, Vector3d end_point, double t, double t_start, double t_end){
     if(t> t_end || t < t_start){
         return Vector3d(0.0, 0.0, 0.0);
@@ -37,6 +41,7 @@ Vector3d linear_velocity_profile(Vector3d start_point, Vector3d end_point, doubl
     return 1/(t_end-t_start)*(end_point-start_point);
 }
 
+// get the desired position and velocity (regarding position, not orientation) for the Haus vom Nikolaus
 Matrix3x2 house_profile(double t, double t_end, double t_buffer){
     // points of the house
     Vector3d p1(-0.03, 0.1, 0.04);
@@ -45,6 +50,7 @@ Matrix3x2 house_profile(double t, double t_end, double t_buffer){
     Vector3d p4(0.03, 0.15, 0.04);
     Vector3d p5(0.0, 0.18, 0.04);
 
+    // define the order of points to achive the house
     Eigen::Matrix<double, 3, 9> point_order;
     point_order.col(0) = p1;
     point_order.col(1) = p2;
@@ -56,15 +62,20 @@ Matrix3x2 house_profile(double t, double t_end, double t_buffer){
     point_order.col(7) = p1;
     point_order.col(8) = p3;
 
+    // calculate the time that drawing a line should take
+    // the t_buffer time iis used to correct to the end point
     double t_line = t_end/8.0-t_buffer;
     Matrix3x2 result;
 
+    // find the current line and get the current desired position and velocity
     for(int i = 0; i < 8; i++){
+        // line time => follow the position and velocity trajectory
         if(t<(1+i)*t_line+i*t_buffer){
             result.col(0) << linear_position_profile(point_order.col(i), point_order.col(i+1), t, i*t_line + i*t_buffer, (i+1)*t_line+ i*t_buffer);
             result.col(1) << linear_velocity_profile(point_order.col(i), point_order.col(i+1), t, i*t_line + i*t_buffer, (i+1)*t_line+ i*t_buffer);
             break;
         }
+        // buffer time => correct to the point
         else if(t<(1+i)*t_line+(i+1)*t_buffer){
             result.col(0) << point_order.col(i+1);
             result.col(1) << Vector3d::Zero();
@@ -129,12 +140,14 @@ Vector5d getPoseError(const Eigen::Affine3d& desired_pose, robot::SurrosControl&
     return Vector5d(position_error(0), position_error(1), position_error(2), error_orientation(0), error_orientation(1));
 }
 
+// publish a message with the current error to vizualize in rqt
 void publishError(const Vector5d& error, rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr& publisher){
     std_msgs::msg::Float64MultiArray msg;
     msg.data = {error(0), error(1), error(2), error(3), error(4)};
     publisher->publish(msg);
 }
 
+// publish a path => both desired and actual path can be published with this method
 void publishPath(const Vector3d& position, rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr& publisher, rclcpp::Node::SharedPtr& node, nav_msgs::msg::Path& msg){
     
     msg.header.frame_id = "base_link";
@@ -224,7 +237,7 @@ int main(int argc, char** argv)
     }
 
     // time to put the pen in the gripper
-    robot.setJointVel(Vector5d::Zero());
+    robot.setJointVel(Vector5d::Zero()); // stop joint motion
     rclcpp::sleep_for(std::chrono::seconds(10));
 
     /*
@@ -237,11 +250,14 @@ int main(int argc, char** argv)
 
     // -------------- Control Loop --------------------------------
     for(double t = 0.0; t < t_end; t+=delta_t){
-        Matrix3x2 desired_pos_ori = house_profile(t, t_end, t_buffer);
-        Vector3d desired_position = desired_pos_ori.col(0);
-        Vector3d desired_velocity = desired_pos_ori.col(1);
+        // get the current desired position and velocity of the end effector
+        Matrix3x2 desired_pos_vel = house_profile(t, t_end, t_buffer);
+        Vector3d desired_position = desired_pos_vel.col(0);
+        Vector3d desired_velocity = desired_pos_vel.col(1);
 
+        // get the homogeneous matrix for the current desired pose
         Eigen::Affine3d desired_pose = robot::createPoseFromPosAndPitch(desired_position, desired_psi, desired_phi);
+        // calculate the error between the desired and current pose
         Vector5d error = getPoseError(desired_pose, robot);
         //std::cout << "Current Pose Error: \n" << error << "\n";
 
@@ -252,14 +268,17 @@ int main(int argc, char** argv)
         publishPath(desired_position, publisher_x_d, node, msg_x_d);
         publishPath(eePose.translation(), publisher_x_e, node, msg_x_e);
         
+        // get the current joint velocities according to inverse kinematics control
         Vector5d joint_velocities = inverseKinematicsControl(error, desired_velocity, robot);
         //std::cout << "Current Joint Velocities: \n" << joint_velocities << "\n";
         //limitJointVel(joint_velocities);
 
         robot.setJointVel(joint_velocities);
+        // wait for delta_t before updating to new joint velocities
         rclcpp::sleep_for(std::chrono::milliseconds(delta_t));
     }
 
+    // stop the motion
     robot.setJointVel(Vector5d::Zero());
 
     // Get and Print the ending End Effector Pose

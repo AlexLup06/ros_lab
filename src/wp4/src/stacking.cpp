@@ -16,11 +16,13 @@ struct Cube {
     Point2f center;
     float rotation = 0.0;
 
+    // definition of an == operator to compare the cubes found in workspace with the cubes in the current cube vector
     bool operator==(const Cube& other) const {
         return color == other.color && std::abs(center.x-other.center.x)<5 && std::abs(center.y-other.center.y)<5;
     }
 };
 
+//Initialization of global variables
 const Size img_size = Size(638,675);
 const Size rect_size = Size(50, 50);
 const Point2f base_link = Point2f(230,508); // base link coordinates in the worspace image
@@ -28,7 +30,7 @@ double tower_height = 0.0;
 vector<Cube> current_cubes;
 
 vector<vector<Point>> findColorContours(const Mat& img_bgr, const string color="red"){
-    // define the hsv values for each possible color
+    // define the hsv threshold values for each possible color
     Scalar hsv_bottom;
     Scalar hsv_top;
 
@@ -82,7 +84,7 @@ vector<Cube> findColoredCubes(const Mat& img_bgr, const string color="red"){
     for(vector<Point> contour: contours){
         // check if the contour area is great enough to count as a cube
         double area = contourArea(contour);
-        //std::cout << "Contour Area: \n" << area << "\n";
+
         if(area > 500){
             // create a cube at the center of the contour
             Cube cube;
@@ -108,6 +110,7 @@ void addCubeToWorkspace(Mat& img, Cube& cube){
         bgr = Scalar(255,0,0);
     }
 
+    //creating the rectangular shape (cube) in the image of the workspace
     RotatedRect rect = RotatedRect(cube.center,rect_size, cube.rotation);
     Point2f vertices2f[4];
     rect.points(vertices2f);
@@ -123,204 +126,172 @@ void drawCurrentWorkspace(Mat& img){
     Mat img_empty_workspace = imread("/home/programmer/ros2_ws/src/wp4/workspace.png");
     resize(img_empty_workspace, img, img_size);
 
+    //add all cubes in the current workspace image
     for(Cube cube: current_cubes){
         addCubeToWorkspace(img, cube);
     }
 }
 
 Point2f getRealWorldCubeCenter(const Cube& cube){
+    //converting the image pixel coordinates to real world xy coordinates
     float center_x = (cube.center.x-base_link.x)*0.2/435;
     float center_y = (base_link.y-cube.center.y)*0.2/435;
     return Point2f(center_x, center_y);
 }
 
 Point2f getWSCoordinates(const Eigen::Vector2d& point){
+    //Converting the real world xy coordinates to image pixel coordinates
     float center_x = point(0)*435/0.2+base_link.x;
     float center_y = base_link.y-point(1)*435/0.2;
     return Point2f(center_x, center_y);
 }
 
-// create a cube with the chosen color and a random center position
-Cube createRandomCube(string color="red"){
+// create a cube with the chosen color and add it to the current cubes
+void createCube(string color="red", const Eigen::Vector2d& real_world_xy = Eigen::Vector2d::Zero(), double rotation = 0.0, bool random = false){
     Cube cube;
     cube.color = color;
-    int center_x = std::rand() % img_size.width;
-    int center_y = std::rand() % img_size.height;
-    cube.center = Point2f(center_x, center_y);
-    cube.rotation = std::rand() % 100;
-    return cube;
+    if(random){
+        int center_x = std::rand() % img_size.width;
+        int center_y = std::rand() % img_size.height;
+        cube.center = Point2f(center_x, center_y);
+        cube.rotation = std::rand() % 100;
+    }
+    else{
+        cube.center = getWSCoordinates(real_world_xy);
+        cube.rotation = rotation;
+    }
+    current_cubes.push_back(cube);
 }
 
-//function given a specific pose executes it using the inverse kinematics method and measures the final executed pose
-void pickAndPlace(Eigen::Vector2d& a_xy,
-        Eigen::Vector2d& b_xy,
-        robot::SurrosControl& robot,
-        double hover_dist = 0.05,
-        int open_percentage = 10,
-        int close_percentage = 80,
-        const std::chrono::seconds duration = std::chrono::seconds(5)){
+// picking up or putting down at the position a_xy
+void pickUpOrPutDown(Eigen::Vector2d& a_xy, 
+    robot::SurrosControl& robot,
+    bool upMode = true,
+    double hover_dist = 0.06,
+    int open_percentage = 10,
+    int close_percentage = 80,
+    const std::chrono::seconds duration = std::chrono::seconds(5)){
 
-    // move to the default position
-    robot.setJointsDefault();
+    // define the gripper percentage according to the Mode
+    double gripper_percentage = open_percentage;
+    if(upMode){
+        gripper_percentage = close_percentage;
+    }        
 
-    // create 3d positions for a and b
-    Eigen::Vector3d a(a_xy(0), a_xy(1), 0.0);
-    Eigen::Vector3d b(b_xy(0), b_xy(1), tower_height);
+    // create 3d position for a
+    Eigen::Vector3d a(a_xy(0)+0.015, a_xy(1), 0.0); //offset on x-axis to account for block width
 
-    // create positionns the hover above the targets
+    // add the height of the tower for putting the block on it
+    if(!upMode){
+        a(2) = tower_height;
+    }
+
+    //adding more hovering distance for the first block to avoid collision with other blocks when moving to the platform
+    if(tower_height <= 0.025){
+        hover_dist += 0.01;
+    }
+
+    // create position the hover above the targets
     Eigen::Vector3d a_above(a(0),a(1),a(2)+hover_dist);
-    Eigen::Vector3d b_above(b(0),b(1),b(2)+hover_dist);
 
-    // orientation towards the ground
-    //double psi = -M_PI/2.0;
-    double psi = 1.5;
+    // orientation slightly downwards
+    double psi = 1.2;
     double phi = 0.0;
-    
+
+    //updating the orientation for the last cube to achieve a reachable pose
+    if(tower_height + 0.05 >= 0.09 ){
+        psi = 0.8;
+    }
+
     // move the gripper to hover above A
     robot.setEndeffectorPose(a_above, psi, phi, rclcpp::Duration(duration));
-
-    std::cout << "Above a \n";
-
     // add buffer time
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-    // open the gripper fully
-    robot.setGripperJoint(open_percentage);
-    std::cout << "Gripper open \n";
-
-    // add buffer time
-    rclcpp::sleep_for(std::chrono::milliseconds(500));
+    // open the gripper when picking up a block
+    if(upMode){
+        // open the gripper fully
+        robot.setGripperJoint(open_percentage);
+        // add buffer time
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
+    }
 
     // lowering the gripper
     robot.setEndeffectorPose(a, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
-
-    std::cout << "A \n";
-
     // add buffer time
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-    // close the gripper to grab the block
-    robot.setGripperJoint(close_percentage);
-    std::cout << "Gripper close \n";
-
+    // when picking up a block close the gripper, when putting down a block open the gripper
+    robot.setGripperJoint(gripper_percentage);
     // add buffer time
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-    // lift the block
+    // move the gripper to hover above A to avoid knocking over blocks when motion continues
     robot.setEndeffectorPose(a_above, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
-    std::cout << "Above a \n";
-
     // add buffer time
     rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-    if(tower_height >= 0.05){
-        psi = 1.0;
-    }
-    /*
-    // move the block above B
-    robot.setEndeffectorPose(b_above, psi, phi, rclcpp::Duration(duration));
-    std::cout << "Above b \n";
-
-    // add buffer time
-    rclcpp::sleep_for(std::chrono::milliseconds(500));
-    */
-
-    // lower the block
-    robot.setEndeffectorPose(b, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
-    std::cout << "B \n";
-
-    // add buffer time
-    rclcpp::sleep_for(std::chrono::milliseconds(500));
-
-    // open the gripper fully to release
-    robot.setGripperJoint(open_percentage);
-    std::cout << "Gripper open \n";
-
-    // add buffer time
-    rclcpp::sleep_for(std::chrono::milliseconds(500));
-
-    /*
-    // lift the gripper
-    robot.setEndeffectorPose(b_above, psi, phi, rclcpp::Duration(std::chrono::seconds(1)));
-    std::cout << "Above b \n";
-
-    // add buffer time
-    rclcpp::sleep_for(std::chrono::milliseconds(500));
-    */
-    // move to the default position
-    robot.setJointsDefault();
-    // close the gripper to grab the block
+    // close the gripper
     robot.setGripperJoint(close_percentage);
-
-    // add height to the tower
-    tower_height += 0.05;
+    // add buffer time
+    rclcpp::sleep_for(std::chrono::milliseconds(500));
 }
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
+    // ------------------- Initialization ------------------------
     auto node_ = std::make_shared<rclcpp::Node>("software_node");
     robot::SurrosControl robot(node_);
 
     // Initialize the SurrosControl instance
     robot.initialize();
 
+    // ------------------- Create Workspace ----------------------
     // initialize the position of the platform in xy coordinates
     Eigen::Vector2d platform(0.15, 0.05);
 
+    // initialize image to store workspace
     Mat img;
-    
 
-    //Cube blue_cube = createRandomCube("blue");
-    //addCubeToWorkspace(img, blue_cube);
-
-    // add the cubes to the workspace
-    Cube red_cube;
-    red_cube.color = "red";
-    red_cube.center = getWSCoordinates(Eigen::Vector2d(0.0, 0.12));
-    red_cube.rotation = 0;
-    current_cubes.push_back(red_cube);
-
-    Cube green_cube;
-    green_cube.color = "green";
-    green_cube.center = getWSCoordinates(Eigen::Vector2d(0.0558, 0.11));;
-    green_cube.rotation = 27;
-    current_cubes.push_back(green_cube);
-
-    Cube blue_cube;
-
-    drawMarker(img, base_link, Scalar(0,0,0));
-    blue_cube.color = "blue";
-    blue_cube.center = getWSCoordinates(Eigen::Vector2d(-0.0558, 0.11));;
-    blue_cube.rotation = -25;
-    current_cubes.push_back(blue_cube);
+    // populate the workspace
+    createCube("red", Eigen::Vector2d(0.0, 0.2));
+    createCube("green", Eigen::Vector2d(0.08, 0.18), 27);
+    createCube("blue", Eigen::Vector2d(-0.08, 0.18), -25);
 
     drawCurrentWorkspace(img);
-
     imshow("Workspace", img);
 
-    // find the cubes
+    // find the cubes in the sequence
     vector<string> color_sequence;
     color_sequence.push_back("red");
     color_sequence.push_back("green");
     color_sequence.push_back("blue");
 
-
-
+    //------------------------- Pick And Place -------------------------------
+    //for the chosen color sequence find the cubes and execute stacking loop
     for(string color: color_sequence){
         vector<Cube> cubes = findColoredCubes(img, color);
         for(Cube cube: cubes){
+            //transfore cube center from image pixel coordinates to real world xy coordinates
             Point2f world_center = getRealWorldCubeCenter(cube);
             Eigen::Vector2d center_xy(world_center.x, world_center.y);
-            pickAndPlace(center_xy, platform, robot);
+            // pick up the cube
+            pickUpOrPutDown(center_xy, robot);
+            // put the cube on the tower
+            pickUpOrPutDown(platform, robot, false, 0.05);
+            // add height to the tower
+            tower_height += 0.035;
 
             // remove the cube from current_cubes
             current_cubes.erase(find(current_cubes.begin(), current_cubes.end(), cube));
 
             // add the cube to the platform in the simulated workspace
             cube.center = getWSCoordinates(platform);
+            //update current cubes vector
             current_cubes.push_back(cube);
             
+            //draw the updated workspace
             drawCurrentWorkspace(img);
             imshow(color, img);
         }
